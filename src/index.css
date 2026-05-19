@@ -1,0 +1,103 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-950: #1e1b4b;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark body {
+  background: #020617;
+  color: #f1f5f9;
+}
+
+.dark {
+  --color-surface: #0f172a;
+  --color-surface-muted: #020617;
+  --color-border: #334155;
+  --color-text: #f1f5f9;
+  --color-text-muted: #94a3b8;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Shared form + surface patterns */
+@layer components {
+  .form-control {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--color-text);
+    outline: none;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+
+  .form-control::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .form-control:focus {
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-500) 20%, transparent);
+  }
+
+  .card {
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.05);
+  }
+
+  .table-row-hover:hover {
+    background: color-mix(in srgb, var(--color-surface-muted) 80%, transparent);
+  }
+}
+
+/* Login stays readable when OS / saved theme is dark */
+.dark .login-screen {
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+}
+
+.dark input:-webkit-autofill,
+.dark textarea:-webkit-autofill,
+.dark select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-surface) inset !important;
+  -webkit-text-fill-color: var(--color-text) !important;
+  caret-color: var(--color-text);
+}

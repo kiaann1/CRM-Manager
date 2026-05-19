@@ -1,0 +1,645 @@
+import { Router } from 'express'
+import { z } from 'zod'
+import { writeAudit } from '../../lib/audit.js'
+import { prisma } from '../../lib/prisma.js'
+import type { AuthRequest } from '../../middleware/auth.js'
+import { requireAuth } from '../../middleware/auth.js'
+import { buildBootstrap } from '../../services/bootstrap.js'
+import { dispatchWebhooks } from '../../services/webhooks.js'
+import { createHash, randomBytes } from 'crypto'
+import { invitesRouter } from '../invites.js'
+
+export const v1Router = Router()
+v1Router.use(requireAuth)
+
+const param = (value: string | string[] | undefined) => String(value ?? '')
+
+v1Router.get('/bootstrap', async (req: AuthRequest, res) => {
+  const data = await buildBootstrap(req.auth!.orgId, req.auth!.sub)
+  res.json(data)
+})
+
+// ——— Contacts ———
+const contactSchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().default(''),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  companyId: z.string().nullable().optional(),
+  title: z.string().optional(),
+  ownerId: z.string(),
+  tagIds: z.array(z.string()).optional(),
+})
+
+v1Router.post('/contacts', async (req: AuthRequest, res) => {
+  const body = contactSchema.parse(req.body)
+  const contact = await prisma.contact.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      email: body.email,
+      phone: body.phone ?? '',
+      companyId: body.companyId ?? null,
+      title: body.title ?? '',
+      ownerId: body.ownerId,
+      tags: body.tagIds?.length
+        ? { create: body.tagIds.map((tagId) => ({ tagId })) }
+        : undefined,
+    },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'contact.created', 'contact', contact.id)
+  await dispatchWebhooks(req.auth!.orgId, 'contact.created', { id: contact.id })
+  res.status(201).json(contact)
+})
+
+v1Router.patch('/contacts/:id', async (req: AuthRequest, res) => {
+  const body = contactSchema.partial().parse(req.body)
+  const contact = await prisma.contact.update({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+    data: {
+      ...body,
+      tags: body.tagIds
+        ? { deleteMany: {}, create: body.tagIds.map((tagId) => ({ tagId })) }
+        : undefined,
+    },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'contact.updated', 'contact', contact.id)
+  res.json(contact)
+})
+
+v1Router.delete('/contacts/:id', async (req: AuthRequest, res) => {
+  await prisma.contact.delete({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'contact.deleted', 'contact', param(req.params.id))
+  res.status(204).end()
+})
+
+// ——— Deals ———
+const dealSchema = z.object({
+  title: z.string().min(1),
+  value: z.number(),
+  stageKey: z.string(),
+  pipelineId: z.string(),
+  contactId: z.string().nullable().optional(),
+  companyId: z.string().nullable().optional(),
+  ownerId: z.string(),
+  expectedClose: z.string().optional(),
+  tagIds: z.array(z.string()).optional(),
+})
+
+v1Router.post('/deals', async (req: AuthRequest, res) => {
+  const body = dealSchema.parse(req.body)
+  const stage = await prisma.pipelineStage.findFirst({
+    where: { pipelineId: body.pipelineId, key: body.stageKey },
+  })
+  const deal = await prisma.deal.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      title: body.title,
+      value: body.value,
+      stageKey: body.stageKey,
+      pipelineId: body.pipelineId,
+      stageId: stage?.id,
+      contactId: body.contactId ?? null,
+      companyId: body.companyId ?? null,
+      ownerId: body.ownerId,
+      expectedClose: body.expectedClose ? new Date(body.expectedClose) : null,
+      tags: body.tagIds?.length
+        ? { create: body.tagIds.map((tagId) => ({ tagId })) }
+        : undefined,
+    },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'deal.created', 'deal', deal.id)
+  await dispatchWebhooks(req.auth!.orgId, 'deal.created', { id: deal.id, stage: deal.stageKey })
+  res.status(201).json(deal)
+})
+
+v1Router.patch('/deals/:id', async (req: AuthRequest, res) => {
+  const body = dealSchema.partial().parse(req.body)
+  const existing = await prisma.deal.findFirst({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  if (!existing) {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  const stageKey = body.stageKey ?? existing.stageKey
+  const stage = body.pipelineId || body.stageKey
+    ? await prisma.pipelineStage.findFirst({
+        where: {
+          pipelineId: body.pipelineId ?? existing.pipelineId,
+          key: stageKey,
+        },
+      })
+    : null
+  const deal = await prisma.deal.update({
+    where: { id: param(req.params.id) },
+    data: {
+      title: body.title,
+      value: body.value,
+      stageKey,
+      pipelineId: body.pipelineId,
+      stageId: stage?.id,
+      contactId: body.contactId,
+      companyId: body.companyId,
+      ownerId: body.ownerId,
+      expectedClose: body.expectedClose ? new Date(body.expectedClose) : undefined,
+    },
+  })
+  if (body.stageKey && body.stageKey !== existing.stageKey) {
+    await dispatchWebhooks(req.auth!.orgId, 'deal.stage_changed', {
+      id: deal.id,
+      from: existing.stageKey,
+      to: body.stageKey,
+    })
+  }
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'deal.updated', 'deal', deal.id)
+  res.json(deal)
+})
+
+// ——— Companies ———
+v1Router.post('/companies', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      name: z.string().min(1),
+      industry: z.string().optional(),
+      website: z.string().optional(),
+      phone: z.string().optional(),
+      ownerId: z.string(),
+      healthScore: z.number().optional(),
+    })
+    .parse(req.body)
+  const company = await prisma.company.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      name: body.name,
+      industry: body.industry ?? '',
+      website: body.website ?? '',
+      phone: body.phone ?? '',
+      ownerId: body.ownerId,
+      healthScore: body.healthScore ?? 70,
+    },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'company.created', 'company', company.id)
+  res.status(201).json(company)
+})
+
+v1Router.patch('/companies/:id', async (req: AuthRequest, res) => {
+  const company = await prisma.company.update({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+    data: req.body,
+  })
+  res.json(company)
+})
+
+v1Router.delete('/companies/:id', async (req: AuthRequest, res) => {
+  await prisma.company.delete({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'company.deleted', 'company', param(req.params.id))
+  res.status(204).end()
+})
+
+v1Router.delete('/deals/:id', async (req: AuthRequest, res) => {
+  await prisma.deal.delete({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'deal.deleted', 'deal', param(req.params.id))
+  res.status(204).end()
+})
+
+// ——— Leads ———
+v1Router.post('/leads', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      firstName: z.string(),
+      lastName: z.string().optional(),
+      email: z.string().email(),
+      phone: z.string().optional(),
+      company: z.string().optional(),
+      stage: z.string().optional(),
+      ownerId: z.string(),
+      source: z.string().optional(),
+      utmSource: z.string().optional(),
+    })
+    .parse(req.body)
+  const lead = await prisma.lead.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      firstName: body.firstName,
+      lastName: body.lastName ?? '',
+      email: body.email,
+      phone: body.phone ?? '',
+      company: body.company ?? '',
+      stage: body.stage ?? 'new',
+      ownerId: body.ownerId,
+      source: body.source ?? 'Manual',
+      utmSource: body.utmSource ?? '',
+    },
+  })
+  res.status(201).json(lead)
+})
+
+v1Router.post('/leads/:id/convert', async (req: AuthRequest, res) => {
+  const lead = await prisma.lead.findFirst({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  if (!lead) {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  const contact = await prisma.contact.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      firstName: lead.firstName,
+      lastName: lead.lastName,
+      email: lead.email,
+      phone: lead.phone,
+      ownerId: lead.ownerId,
+      leadId: lead.id,
+    },
+  })
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: { stage: 'converted', convertedContactId: contact.id, score: 100 },
+  })
+  res.json({ contact })
+})
+
+v1Router.patch('/leads/:id', async (req: AuthRequest, res) => {
+  const lead = await prisma.lead.update({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+    data: req.body,
+  })
+  res.json(lead)
+})
+
+v1Router.delete('/leads/:id', async (req: AuthRequest, res) => {
+  await prisma.lead.delete({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  res.status(204).end()
+})
+
+// ——— Tasks ———
+v1Router.post('/tasks', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      title: z.string(),
+      description: z.string().optional(),
+      dueDate: z.string().optional(),
+      priority: z.string().optional(),
+      status: z.string().optional(),
+      ownerId: z.string(),
+      dealId: z.string().nullable().optional(),
+      contactId: z.string().nullable().optional(),
+    })
+    .parse(req.body)
+  const task = await prisma.task.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      title: body.title,
+      description: body.description ?? '',
+      dueDate: body.dueDate ? new Date(body.dueDate) : null,
+      priority: body.priority ?? 'medium',
+      status: body.status ?? 'todo',
+      ownerId: body.ownerId,
+      dealId: body.dealId ?? null,
+      contactId: body.contactId ?? null,
+    },
+  })
+  res.status(201).json(task)
+})
+
+v1Router.patch('/tasks/:id', async (req: AuthRequest, res) => {
+  const body = req.body as Record<string, unknown>
+  const task = await prisma.task.update({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+    data: {
+      ...body,
+      dueDate: body.dueDate ? new Date(String(body.dueDate)) : undefined,
+    },
+  })
+  res.json(task)
+})
+
+v1Router.delete('/tasks/:id', async (req: AuthRequest, res) => {
+  await prisma.task.delete({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  res.status(204).end()
+})
+
+// ——— Calendar events ———
+v1Router.post('/calendar-events', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      title: z.string().min(1),
+      start: z.string(),
+      end: z.string(),
+      recordType: z.string().nullable().optional(),
+      recordId: z.string().nullable().optional(),
+      userId: z.string(),
+      externalSync: z.enum(['none', 'google', 'outlook']).optional(),
+    })
+    .parse(req.body)
+  const event = await prisma.calendarEvent.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      title: body.title,
+      start: new Date(body.start),
+      end: new Date(body.end),
+      recordType: body.recordType ?? null,
+      recordId: body.recordId ?? null,
+      userId: body.userId,
+      externalSync: body.externalSync ?? 'none',
+    },
+  })
+  res.status(201).json(event)
+})
+
+v1Router.delete('/calendar-events/:id', async (req: AuthRequest, res) => {
+  await prisma.calendarEvent.delete({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  res.status(204).end()
+})
+
+// ——— Goals ———
+v1Router.post('/goals', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      title: z.string().min(1),
+      target: z.number().positive(),
+      current: z.number().min(0).optional(),
+      quarter: z.string().min(1),
+      ownerId: z.string(),
+    })
+    .parse(req.body)
+  const goal = await prisma.goal.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      title: body.title,
+      target: body.target,
+      current: body.current ?? 0,
+      quarter: body.quarter,
+      ownerId: body.ownerId,
+    },
+  })
+  res.status(201).json(goal)
+})
+
+v1Router.patch('/goals/:id', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      title: z.string().min(1).optional(),
+      target: z.number().positive().optional(),
+      current: z.number().min(0).optional(),
+      quarter: z.string().optional(),
+      ownerId: z.string().optional(),
+    })
+    .parse(req.body)
+  const goal = await prisma.goal.update({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+    data: body,
+  })
+  res.json(goal)
+})
+
+v1Router.delete('/goals/:id', async (req: AuthRequest, res) => {
+  await prisma.goal.delete({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  res.status(204).end()
+})
+
+// ——— Documents ———
+v1Router.post('/documents', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      title: z.string().min(1),
+      content: z.string().default(''),
+      recordType: z.string().nullable().optional(),
+      recordId: z.string().nullable().optional(),
+    })
+    .parse(req.body)
+  const doc = await prisma.document.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      title: body.title,
+      content: body.content,
+      recordType: body.recordType ?? null,
+      recordId: body.recordId ?? null,
+    },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'document.created', 'document', doc.id)
+  res.status(201).json(doc)
+})
+
+v1Router.patch('/documents/:id', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      title: z.string().min(1).optional(),
+      content: z.string().optional(),
+      recordType: z.string().nullable().optional(),
+      recordId: z.string().nullable().optional(),
+    })
+    .parse(req.body)
+  const doc = await prisma.document.update({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+    data: body,
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'document.updated', 'document', doc.id)
+  res.json(doc)
+})
+
+v1Router.delete('/documents/:id', async (req: AuthRequest, res) => {
+  await prisma.document.delete({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'document.deleted', 'document', param(req.params.id))
+  res.status(204).end()
+})
+
+// ——— Activities & comments ———
+v1Router.post('/activities', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      type: z.string(),
+      subject: z.string(),
+      body: z.string().optional(),
+      recordType: z.string(),
+      recordId: z.string(),
+    })
+    .parse(req.body)
+  const activity = await prisma.activity.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      userId: req.auth!.sub,
+      type: body.type,
+      subject: body.subject,
+      body: body.body ?? '',
+      recordType: body.recordType,
+      recordId: body.recordId,
+    },
+  })
+  res.status(201).json(activity)
+})
+
+v1Router.post('/comments', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      recordType: z.string(),
+      recordId: z.string(),
+      body: z.string(),
+      mentions: z.array(z.string()).optional(),
+    })
+    .parse(req.body)
+  const comment = await prisma.comment.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      userId: req.auth!.sub,
+      recordType: body.recordType,
+      recordId: body.recordId,
+      body: body.body,
+      mentions: body.mentions ?? [],
+    },
+  })
+  res.status(201).json(comment)
+})
+
+// ——— Webhooks ———
+v1Router.get('/webhooks', async (req: AuthRequest, res) => {
+  const hooks = await prisma.webhookEndpoint.findMany({
+    where: { organizationId: req.auth!.orgId },
+  })
+  res.json(hooks)
+})
+
+v1Router.post('/webhooks', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      url: z.string().url(),
+      events: z.array(z.string()),
+      secret: z.string().optional(),
+    })
+    .parse(req.body)
+  const hook = await prisma.webhookEndpoint.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      url: body.url,
+      events: body.events,
+      secret: body.secret,
+    },
+  })
+  res.status(201).json(hook)
+})
+
+v1Router.post('/webhooks/:id/test', async (req: AuthRequest, res) => {
+  const hook = await prisma.webhookEndpoint.findFirst({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  if (!hook) {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  await dispatchWebhooks(req.auth!.orgId, 'webhook.test', {
+    webhookId: hook.id,
+    message: 'Test delivery from CRM Manager',
+  })
+  res.json({ ok: true })
+})
+
+// ——— Integrations ———
+v1Router.patch('/integrations/:type', async (req: AuthRequest, res) => {
+  const body = z.object({ enabled: z.boolean(), config: z.record(z.unknown()).optional() }).parse(req.body)
+  const integration = await prisma.integrationConnection.upsert({
+    where: {
+        organizationId_type: {
+        organizationId: req.auth!.orgId,
+        type: param(req.params.type),
+      },
+    },
+    create: {
+      organizationId: req.auth!.orgId,
+      type: param(req.params.type),
+      name: param(req.params.type),
+      enabled: body.enabled,
+      config: (body.config ?? {}) as object,
+    },
+    update: {
+      enabled: body.enabled,
+      config: body.config as object | undefined,
+    },
+  })
+  res.json(integration)
+})
+
+// ——— API keys (programmatic access) ———
+v1Router.get('/api-keys', async (req: AuthRequest, res) => {
+  const keys = await prisma.apiKey.findMany({
+    where: { organizationId: req.auth!.orgId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      prefix: true,
+      lastUsedAt: true,
+      createdAt: true,
+    },
+  })
+  res.json(keys)
+})
+
+v1Router.post('/api-keys', async (req: AuthRequest, res) => {
+  const body = z.object({ name: z.string().min(1) }).parse(req.body)
+  const raw = `crm_${randomBytes(32).toString('base64url')}`
+  const keyHash = createHash('sha256').update(raw).digest('hex')
+  const prefix = raw.slice(0, 12)
+  await prisma.apiKey.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      name: body.name,
+      keyHash,
+      prefix,
+    },
+  })
+  res.status(201).json({ key: raw, prefix, message: 'Store this key securely; it will not be shown again.' })
+})
+
+v1Router.use('/invites', invitesRouter)
+
+// ——— User preferences ———
+v1Router.patch('/preferences', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      theme: z.enum(['light', 'dark', 'system']).optional(),
+      emailDigest: z.boolean().optional(),
+      pushEnabled: z.boolean().optional(),
+    })
+    .parse(req.body)
+  const prefs = await prisma.userPreference.upsert({
+    where: { userId: req.auth!.sub },
+    create: { userId: req.auth!.sub, ...body },
+    update: body,
+  })
+  res.json(prefs)
+})
+
+// OpenAPI-style health for API consumers
+v1Router.get('/openapi', (_req, res) => {
+  res.json({
+    openapi: '3.0.0',
+    info: { title: 'CRM Manager API', version: '1.0.0' },
+    paths: {
+      '/api/v1/bootstrap': { get: { summary: 'Full workspace state' } },
+      '/api/v1/contacts': { post: { summary: 'Create contact' } },
+      '/api/v1/deals': { post: { summary: 'Create deal' } },
+      '/api/v1/webhooks': { get: {}, post: {} },
+      '/api/v1/api-keys': { post: { summary: 'Create API key' } },
+      '/api/v1/invites': { get: {}, post: { summary: 'Invite user to org' } },
+    },
+  })
+})

@@ -1,0 +1,322 @@
+/**
+ * API-backed CRM provider. Replaces localStorage persistence with REST + cookies.
+ */
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+import { api, ApiError } from '../lib/api/client'
+import { defaultState } from '../lib/storage'
+import type { CrmState, DealStage, TaskStatus, UserPreferences } from '../types'
+import type { CrmContextValue } from './CrmContext'
+
+const CrmApiContext = createContext<CrmContextValue | null>(null)
+
+export function CrmApiProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<CrmState>({ ...defaultState, session: null })
+  const [loading, setLoading] = useState(true)
+
+  const reload = useCallback(async () => {
+    const data = await api.bootstrap()
+    setState(data)
+    return data
+  }, [])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        await api.refresh().catch(() => undefined)
+        await reload()
+      } catch (e) {
+        if (!(e instanceof ApiError && e.status === 401)) {
+          console.error('Bootstrap failed', e)
+        }
+        setState((s) => ({ ...s, session: null }))
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [reload])
+
+  useEffect(() => {
+    const root = document.documentElement
+    const theme = state.preferences.theme
+    const dark =
+      theme === 'dark' ||
+      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    root.classList.toggle('dark', dark)
+  }, [state.preferences.theme])
+
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      await api.login(email, password)
+      await reload()
+      return true
+    } catch {
+      return false
+    }
+  }, [reload])
+
+  const logout = useCallback(async () => {
+    await api.logout().catch(() => undefined)
+    setState((s) => ({ ...s, session: null }))
+  }, [])
+
+  const setPreferences = useCallback(
+    async (prefs: Partial<UserPreferences>) => {
+      await api.updatePreferences(prefs)
+      setState((prev) => ({ ...prev, preferences: { ...prev.preferences, ...prefs } }))
+    },
+    [],
+  )
+
+  const resetDemoData = useCallback(() => {
+    window.location.reload()
+  }, [])
+
+  const patch = useCallback((updater: (prev: CrmState) => CrmState) => {
+    setState(updater)
+  }, [])
+
+  const uid = state.session?.userId ?? ''
+
+  const after = useCallback(
+    async (fn: () => Promise<unknown>) => {
+      await fn()
+      await reload()
+    },
+    [reload],
+  )
+
+  const value = useMemo<CrmContextValue>(() => {
+    const getters = {
+      getCompany: (id: string) => state.companies.find((c) => c.id === id),
+      getContact: (id: string) => state.contacts.find((c) => c.id === id),
+      getDeal: (id: string) => state.deals.find((d) => d.id === id),
+      getLead: (id: string) => state.leads.find((l) => l.id === id),
+      getUser: (id: string) => state.users.find((u) => u.id === id),
+      getActivities: (recordType: import('../types').RecordType, recordId: string) =>
+        state.activities.filter(
+          (a) => a.recordType === recordType && a.recordId === recordId,
+        ),
+      getComments: (recordType: import('../types').RecordType, recordId: string) =>
+        state.comments.filter(
+          (c) => c.recordType === recordType && c.recordId === recordId,
+        ),
+      getFiles: (recordType: import('../types').RecordType, recordId: string) =>
+        state.files.filter(
+          (f) => f.recordType === recordType && f.recordId === recordId,
+        ),
+    }
+
+    return {
+      ...state,
+      currentUser: state.users.find((u) => u.id === state.session?.userId),
+      login,
+      logout,
+      setPreferences,
+      resetDemoData,
+      patch,
+      addCompany: (data) => {
+        void after(() => api.createCompany(data))
+      },
+      updateCompany: (id, data) => {
+        void after(() => api.updateCompany(id, data))
+      },
+      deleteCompany: (id) => {
+        void after(() => api.deleteCompany(id))
+      },
+      addContact: (data) => {
+        void after(() => api.createContact(data))
+      },
+      updateContact: (id, data) => {
+        void after(() => api.updateContact(id, data))
+      },
+      deleteContact: (id) => {
+        void after(() => api.deleteContact(id))
+      },
+      addLead: (data) => {
+        void after(() =>
+          fetch(`${api.baseUrl}/api/v1/leads`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          }),
+        )
+      },
+      updateLead: (id, data) => {
+        void after(() => api.updateLead(id, data))
+      },
+      convertLead: (id) => {
+        void after(() =>
+          fetch(`${api.baseUrl}/api/v1/leads/${id}/convert`, {
+            method: 'POST',
+            credentials: 'include',
+          }),
+        )
+      },
+      deleteLead: (id) => {
+        void after(() => api.deleteLead(id))
+      },
+      addDeal: (data) => {
+        void after(() =>
+          api.createDeal({
+            ...data,
+            stageKey: data.stage,
+          }),
+        )
+      },
+      updateDeal: (id, data) => {
+        void after(() =>
+          api.updateDeal(id, {
+            ...data,
+            stageKey: data.stage,
+          }),
+        )
+      },
+      deleteDeal: (id) => {
+        void after(() => api.deleteDeal(id))
+      },
+      moveDeal: (id, stage: DealStage) => {
+        void after(() => api.updateDeal(id, { stageKey: stage }))
+      },
+      addTask: (data) => {
+        void after(() =>
+          fetch(`${api.baseUrl}/api/v1/tasks`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          }),
+        )
+      },
+      updateTask: (id, data) => {
+        void after(() =>
+          fetch(`${api.baseUrl}/api/v1/tasks/${id}`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          }),
+        )
+      },
+      deleteTask: (id) => {
+        void after(() => api.deleteTask(id))
+      },
+      setTaskStatus: (id, status: TaskStatus) => {
+        void after(() =>
+          fetch(`${api.baseUrl}/api/v1/tasks/${id}`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+          }),
+        )
+      },
+      addActivity: (data) => {
+        void after(() => api.createActivity(data))
+      },
+      logEmail: (data) => {
+        void after(() =>
+          api.createActivity({
+            type: 'email',
+            subject: data.subject,
+            body: data.body,
+            recordType: data.recordType,
+            recordId: data.recordId,
+          }),
+        )
+      },
+      addCalendarEvent: (data) => {
+        void after(() => api.createCalendarEvent(data))
+      },
+      deleteCalendarEvent: (id) => {
+        void after(() => api.deleteCalendarEvent(id))
+      },
+      addGoal: (data) => {
+        void after(() => api.createGoal(data))
+      },
+      updateGoal: (id, data) => {
+        void after(() => api.updateGoal(id, data))
+      },
+      deleteGoal: (id) => {
+        void after(() => api.deleteGoal(id))
+      },
+      addDocument: (data) => {
+        void after(() => api.createDocument(data))
+      },
+      updateDocument: (id, data) => {
+        void after(() => api.updateDocument(id, data))
+      },
+      deleteDocument: (id) => {
+        void after(() => api.deleteDocument(id))
+      },
+      addQuote: () => {
+        void reload()
+      },
+      addContract: () => {
+        void reload()
+      },
+      addComment: (data) => {
+        void after(() => api.createComment(data))
+      },
+      markNotificationRead: (id) => {
+        void patch((prev) => ({
+          ...prev,
+          notifications: prev.notifications.map((n) =>
+            n.id === id ? { ...n, read: true } : n,
+          ),
+        }))
+      },
+      addTicket: () => {
+        void reload()
+      },
+      updateTicket: () => {
+        void reload()
+      },
+      addAutomation: () => {
+        void reload()
+      },
+      updateAutomation: () => {
+        void reload()
+      },
+      mergeContacts: () => {
+        void reload()
+      },
+      setCustomField: () => {
+        void reload()
+      },
+      addCustomFieldDef: () => {
+        void reload()
+      },
+      importRows: () => {
+        void reload()
+      },
+      ...getters,
+    }
+  }, [state, login, logout, setPreferences, resetDemoData, patch, after, reload, uid])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface-muted dark:bg-slate-950">
+        <p className="text-sm text-text-muted">Loading workspace…</p>
+      </div>
+    )
+  }
+
+  return <CrmApiContext.Provider value={value}>{children}</CrmApiContext.Provider>
+}
+
+export function useCrm(): CrmContextValue {
+  const ctx = useContext(CrmApiContext)
+  if (!ctx) throw new Error('useCrm must be used within CrmApiProvider')
+  return ctx
+}
+
+export { CrmApiProvider as CrmProvider }
