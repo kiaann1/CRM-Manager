@@ -78,6 +78,15 @@ export const api = {
 
   bootstrap: () => request<CrmState>('/api/v1/bootstrap'),
 
+  search: (q: string) =>
+    request<{
+      contacts: { id: string; firstName: string; lastName: string; email: string; title: string }[]
+      companies: { id: string; name: string; industry: string }[]
+      deals: { id: string; title: string; stageKey: string; value: number }[]
+      leads: { id: string; firstName: string; lastName: string; email: string; company: string }[]
+      documents: { id: string; title: string }[]
+    }>(`/api/v1/search?q=${encodeURIComponent(q)}`),
+
   updatePreferences: (prefs: Partial<CrmState['preferences']>) =>
     request('/api/v1/preferences', { method: 'PATCH', body: JSON.stringify(prefs) }),
 

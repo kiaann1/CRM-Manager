@@ -115,7 +115,7 @@ export function ContactsPage() {
           </>
         }
       />
-      <div className="p-8">
+      <div className="page-shell">
         <ListFilterBar
           query={filters.query}
           onQueryChange={filters.setQuery}
@@ -144,9 +144,9 @@ export function ContactsPage() {
             }
           />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-border bg-surface-muted text-text-muted">
+          <div className="data-table-wrap">
+            <table className="data-table">
+              <thead>
                 <tr>
                   <th className="px-5 py-3 font-medium">Name</th>
                   <th className="px-5 py-3 font-medium">Email</th>

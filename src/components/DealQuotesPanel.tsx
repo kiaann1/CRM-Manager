@@ -51,7 +51,7 @@ export function DealQuotesPanel({ dealId }: { dealId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border p-3 dark:border-slate-700">
+      <div className="list-item p-3">
         <p className="mb-2 text-xs font-semibold uppercase text-text-muted">New quote</p>
         <div className="space-y-2">
           <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -81,7 +81,7 @@ export function DealQuotesPanel({ dealId }: { dealId: string }) {
           dealQuotes.map((q) => (
             <li
               key={q.id}
-              className="rounded-lg border border-border p-3 dark:border-slate-700"
+              className="list-item p-3"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">

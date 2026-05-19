@@ -12,11 +12,14 @@ import { createHash, randomBytes } from 'crypto'
 import { integrationsRouter } from '../integrations.js'
 import { invitesRouter } from '../invites.js'
 import { crmExtrasRouter } from '../crmExtras.js'
+import { searchRouter } from '../search.js'
 
 export const v1Router = Router()
 v1Router.use(requireAuth)
 
 const param = (value: string | string[] | undefined) => String(value ?? '')
+
+v1Router.use('/search', searchRouter)
 
 v1Router.get('/bootstrap', async (req: AuthRequest, res, next) => {
   try {

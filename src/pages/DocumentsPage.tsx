@@ -28,7 +28,7 @@ export function DocumentsPage() {
       />
 
       {documents.length === 0 ? (
-        <div className="p-8">
+        <div className="page-shell">
           <EmptyState
             icon={FileText}
             title="No documents yet"
@@ -42,13 +42,13 @@ export function DocumentsPage() {
           />
         </div>
       ) : (
-        <ul className="grid gap-4 p-8 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="page-shell grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {documents.map((d) => {
             const preview = stripHtml(d.content) || 'No content yet.'
             return (
               <li
                 key={d.id}
-                className="group flex flex-col rounded-xl border border-border bg-surface transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900"
+                className="group panel flex flex-col transition-shadow hover:shadow-lg"
               >
                 <Link to={`/docs/${d.id}`} className="flex flex-1 flex-col p-5">
                   <FileText className="mb-2 text-brand-600" size={24} />

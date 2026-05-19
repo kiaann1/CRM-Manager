@@ -73,13 +73,13 @@ export function MarketingPage() {
           </Button>
         }
       />
-      <div className="grid gap-6 p-8 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-surface p-5 dark:border-slate-700 dark:bg-slate-900">
+      <div className="page-shell grid gap-6 lg:grid-cols-2">
+        <section className="panel panel-pad">
           <h2 className="mb-4 font-semibold">Lead capture forms</h2>
           {forms.map((f) => (
             <div
               key={f.id}
-              className="mb-4 rounded-lg border border-border p-4 dark:border-slate-700"
+              className="mb-4 list-item p-4"
             >
               <p className="font-medium">{f.name}</p>
               <p className="text-xs text-text-muted">
@@ -89,7 +89,7 @@ export function MarketingPage() {
             </div>
           ))}
         </section>
-        <section className="rounded-xl border border-border bg-surface p-5 dark:border-slate-700 dark:bg-slate-900">
+        <section className="panel panel-pad">
           <h2 className="mb-4 font-semibold">Campaigns & attribution</h2>
           {campaigns.length === 0 ? (
             <p className="text-sm text-text-muted">No campaigns yet.</p>
@@ -98,7 +98,7 @@ export function MarketingPage() {
               {campaigns.map((c) => (
                 <li
                   key={c.id}
-                  className="flex items-start justify-between gap-2 rounded-lg border border-border p-3 dark:border-slate-700"
+                  className="flex items-start justify-between gap-2 list-item p-3"
                 >
                   <div>
                     <p className="flex items-center gap-1 text-sm font-medium">
@@ -139,7 +139,7 @@ export function MarketingPage() {
             </p>
           ))}
         </section>
-        <section className="rounded-xl border border-border bg-surface p-5 lg:col-span-2 dark:border-slate-700 dark:bg-slate-900">
+        <section className="panel panel-pad lg:col-span-2">
           <h2 className="mb-2 font-semibold">Meeting scheduler & live chat</h2>
           <p className="text-sm text-text-muted">
             Scheduler link: /book/demo · Chat widget captures visitors as leads.

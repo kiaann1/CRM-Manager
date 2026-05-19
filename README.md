@@ -193,8 +193,10 @@ CRM-Manager/
 | `npm run dev:web` | Vite only |
 | `npm run dev:api` | API only |
 | `npm run build` | Build server + SPA |
-| `npm run db:up` | Start Postgres container |
+| `npm run db:up` | Start Postgres container (Docker) |
 | `npm run db:setup` | Push schema + seed demo org |
+| `npm run db:setup:neon` | Same, tuned for cloud DB when port 5432 is blocked |
+| `npm run db:push --prefix server` | Apply Prisma schema only |
 
 **Login / bootstrap 500?** The database may be missing newer columns. Either run `npm run db:push --prefix server`, or paste `server/prisma/migrations/inbox-messaging.sql` into the [Neon SQL editor](https://console.neon.tech) and run it. Then restart `npm run dev`. Demo login: `admin@crm.local` / `demo1234`.
 
@@ -217,16 +219,52 @@ Deal pipeline moves also notify enabled Slack/Teams webhooks automatically.
 
 ---
 
-## Roadmap (build upon)
+## What to build next
 
-| Area | Next steps |
-|------|------------|
-| Email / calendar | Gmail & Microsoft Graph OAuth, sync jobs |
-| Files | S3-compatible object storage for attachments |
-| Real-time | WebSockets for inbox and presence |
-| Automations | Server-side rule engine (today: partial UI + seed data) |
-| Billing | Seats / plans per organization |
-| AI | Replace heuristics with LLM via your provider of choice |
+Suggested order by impact vs effort. Pick one vertical and ship it end-to-end before starting the next.
+
+### Near term (high impact)
+
+| Priority | Feature | Why | Main work |
+|----------|---------|-----|-----------|
+| 1 | **Database migrations** | Avoid bootstrap/login issues on Neon | Run `db:push` or `server/prisma/migrations/inbox-messaging.sql`; document in CI |
+| 2 | **Real email send** | “Log email” ≠ sending mail | SMTP or Gmail API; queue + templates from record drawer & sequences |
+| 3 | **Saved views & segments** | Power users live in filters | Prisma models, API CRUD, wire list pages + command palette |
+| 4 | **Global search API** | ⌘K only searches loaded bootstrap | `GET /api/v1/search?q=` across contacts, deals, companies, docs |
+| 5 | **Automation engine v2** | Only deal-stage rules run today | Triggers: lead created, task overdue; actions: email, webhook, field update |
+| 6 | **File uploads** | Drawer shows files but no blobs | S3/R2 presigned URLs; virus scan optional; link to record |
+
+### Medium term
+
+| Feature | Notes |
+|---------|--------|
+| **Gmail / Outlook sync** | OAuth already stubbed in integrations; background jobs for calendar + mail ingest |
+| **WebSockets** | Live inbox, notifications, optional presence — Redis pub/sub or Socket.io |
+| **Email sequences** | UI + seed data exist; scheduler to send steps on delays |
+| **Marketing forms** | Public `POST /forms/:id/submit` → create lead + notification |
+| **RBAC middleware** | Enforce `admin` / `manager` on invites, API keys, pipeline edit, audit |
+| **OpenAPI + SDK** | Replace stub; generate types for `client.ts` |
+| **E2E tests** | Playwright: login → create deal → move stage → webhook fired |
+
+### Later
+
+| Feature | Notes |
+|---------|--------|
+| **Billing** | Stripe Billing for seats; tie to `Organization` plan |
+| **AI copilot** | LLM for email drafts, deal summary, next-best-action (replace heuristics in `src/lib/ai.ts`) |
+| **Mobile / PWA** | Offline-friendly tasks + contacts |
+| **Multi-pipeline & territories** | Schema supports it; UI for territory rules and rep assignment |
+| **Deploy guide** | Vercel/Render + Neon + env checklist, cookie domains for prod SSO |
+
+### Good first PRs (small)
+
+- Add **Products** to command palette & dashboard shortcuts consistently  
+- **Board column** create/rename/delete API (today: create board + move items)  
+- **Inbox**: mark thread read for all team members vs per-user (after inbox SQL migration)  
+- **Settings → Profile**: edit display name, change password  
+- **Deal won/lost** webhook events + Zapier template in README  
+
+Contributions welcome — extend `server/src/routes/v1` and `crmExtras.ts`, then wire `CrmProviderApi` + a page.
 
 ---
 

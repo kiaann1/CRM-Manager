@@ -5,24 +5,26 @@ import { NotificationBell } from '../NotificationBell'
 import { CommandPaletteProvider, useCommandPalette } from '../../context/CommandPaletteContext'
 import { QuickCreateFab } from '../QuickCreateFab'
 import { Sidebar } from './Sidebar'
+import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
 
 function AppHeader() {
   const { setOpen } = useCommandPalette()
 
   return (
-    <header className="flex items-center justify-end gap-2 border-b border-border bg-surface px-4 py-2">
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm text-text-muted hover:bg-surface-muted dark:border-slate-700 dark:hover:bg-slate-800"
-      >
-        <Search size={16} />
-        Search
-        <kbd className="rounded bg-slate-100 px-1.5 text-xs dark:bg-slate-800">⌘K</kbd>
+    <header className="glass-panel sticky top-0 z-30 flex items-center gap-3 border-b border-border/80 px-4 py-2.5">
+      <button type="button" onClick={() => setOpen(true)} className="search-trigger">
+        <Search size={16} className="shrink-0 opacity-60" />
+        <span className="flex-1 text-left">Search anything…</span>
+        <kbd className="hidden rounded-md border border-border bg-surface px-1.5 py-0.5 font-mono text-[10px] text-text-muted sm:inline">
+          ⌘K
+        </kbd>
       </button>
-      <NotificationBell />
-      <UserMenu />
+      <div className="flex shrink-0 items-center gap-1">
+        <ThemeToggle />
+        <NotificationBell />
+        <UserMenu />
+      </div>
     </header>
   )
 }
@@ -30,11 +32,11 @@ function AppHeader() {
 export function AppLayout() {
   return (
     <CommandPaletteProvider>
-      <div className="flex min-h-screen bg-surface-muted">
+      <div className="app-mesh flex min-h-screen">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <AppHeader />
-          <main className="flex-1 overflow-auto">
+          <main className="page-content flex-1 overflow-auto">
             <Outlet />
           </main>
         </div>

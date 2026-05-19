@@ -84,7 +84,7 @@ export function GoalsPage() {
           </Button>
         }
       />
-      <section className="grid gap-6 p-8 lg:grid-cols-2">
+      <section className="page-shell grid gap-6 lg:grid-cols-2">
         <article className="card p-5">
           <h2 className="mb-4 font-semibold text-text">OKRs</h2>
           {goals.length === 0 ? (
@@ -139,11 +139,8 @@ export function GoalsPage() {
                         {formatCurrency(g.current)} / {formatCurrency(g.target)}
                       </span>
                     </p>
-                    <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
-                      <div
-                        className="h-full rounded-full bg-brand-600 transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
+                    <div className="progress-track">
+                      <div className="progress-fill transition-all" style={{ width: `${pct}%` }} />
                     </div>
                   </li>
                 )

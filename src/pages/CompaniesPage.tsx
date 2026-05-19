@@ -136,7 +136,7 @@ export function CompaniesPage() {
           </Button>
         }
       />
-      <div className="p-8">
+      <div className="page-shell">
         <ListFilterBar
           query={filters.query}
           onQueryChange={filters.setQuery}

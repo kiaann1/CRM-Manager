@@ -35,7 +35,8 @@ export function IntegrationsPage() {
         description="Connect Slack, email, HubSpot, Stripe, and automation tools. Test connections and sync data into your workspace."
       />
 
-      <div className="rounded-xl border border-border bg-surface-muted/50 px-4 py-3 text-sm text-text-muted dark:border-slate-700">
+      <div className="page-shell space-y-6">
+      <div className="panel px-4 py-3 text-sm text-text-muted">
         <strong className="text-text">Tip:</strong> Outbound webhooks for custom events live under{' '}
         <a href="/settings" className="font-medium text-brand-600 hover:underline">
           Settings → Webhooks
@@ -63,6 +64,7 @@ export function IntegrationsPage() {
       {crm.integrations.length === 0 && (
         <p className="text-sm text-text-muted">Loading integrations…</p>
       )}
+      </div>
     </div>
   )
 }

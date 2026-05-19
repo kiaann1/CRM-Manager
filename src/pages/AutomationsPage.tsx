@@ -68,8 +68,8 @@ export function AutomationsPage() {
           </Button>
         }
       />
-      <div className="grid gap-6 p-8 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-surface p-5 dark:border-slate-700 dark:bg-slate-900">
+      <div className="page-shell grid gap-6 lg:grid-cols-2">
+        <section className="panel panel-pad">
           <h2 className="mb-4 flex items-center gap-2 font-semibold">
             <Zap size={18} /> Rules
           </h2>
@@ -77,7 +77,7 @@ export function AutomationsPage() {
             {automations.map((r) => (
               <li
                 key={r.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border p-3 dark:border-slate-700"
+                className="flex items-center justify-between gap-2 list-item p-3"
               >
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{r.name}</p>
@@ -119,7 +119,7 @@ export function AutomationsPage() {
           </ul>
         </section>
         <section className="space-y-4">
-          <div className="rounded-xl border border-border bg-surface p-5 dark:border-slate-700 dark:bg-slate-900">
+          <div className="panel panel-pad">
             <h2 className="mb-3 font-semibold">Email sequences</h2>
             {emailSequences.map((s) => (
               <p key={s.id} className="text-sm">
@@ -127,7 +127,7 @@ export function AutomationsPage() {
               </p>
             ))}
           </div>
-          <div className="rounded-xl border border-border bg-surface p-5 dark:border-slate-700 dark:bg-slate-900">
+          <div className="panel panel-pad">
             <h2 className="mb-3 font-semibold">Webhooks & API</h2>
             {webhooks.map((w) => (
               <p key={w.id} className="truncate text-sm text-text-muted">
@@ -138,7 +138,7 @@ export function AutomationsPage() {
               Public REST API: POST /api/v1/deals (configure in Settings)
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-surface p-5 dark:border-slate-700 dark:bg-slate-900">
+          <div className="panel panel-pad">
             <h2 className="mb-3 font-semibold">Integrations</h2>
             {integrations.map((i) => (
               <div key={i.id} className="flex justify-between py-1 text-sm">
@@ -149,14 +149,14 @@ export function AutomationsPage() {
               </div>
             ))}
           </div>
-          <div className="rounded-xl border border-border bg-surface p-5 dark:border-slate-700 dark:bg-slate-900">
+          <div className="panel panel-pad">
             <h2 className="mb-3 font-semibold">Pending approvals</h2>
             {approvals
               .filter((a) => a.status === 'pending')
               .map((a) => (
                 <div
                   key={a.id}
-                  className="mb-3 rounded-lg border border-border p-3 dark:border-slate-700"
+                  className="mb-3 list-item p-3"
                 >
                   <p className="text-sm font-medium">{a.title}</p>
                   <p className="text-xs text-text-muted">

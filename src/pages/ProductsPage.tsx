@@ -74,7 +74,7 @@ export function ProductsPage() {
           </Button>
         }
       />
-      <div className="p-8">
+      <div className="page-shell">
         <Input
           label="Search catalog"
           value={query}
@@ -94,7 +94,7 @@ export function ProductsPage() {
             }
           />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border dark:border-slate-700">
+          <div className="data-table-wrap">
             <table className="w-full text-sm">
               <thead className="bg-surface-muted text-left text-xs uppercase text-text-muted dark:bg-slate-800">
                 <tr>

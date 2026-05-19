@@ -125,7 +125,7 @@ export function QuickCreateFab() {
           type="button"
           aria-label="Quick create"
           onClick={() => setMenuOpen((o) => !o)}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/30 hover:bg-brand-700"
+          className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-xl shadow-brand-600/35 transition hover:scale-105 hover:shadow-brand-600/45 active:scale-95"
         >
           <Plus size={24} className={menuOpen ? 'rotate-45 transition' : 'transition'} />
         </button>

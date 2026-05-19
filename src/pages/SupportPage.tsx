@@ -56,14 +56,14 @@ export function SupportPage() {
           </Button>
         }
       />
-      <div className="grid gap-6 p-8 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-surface p-5 dark:border-slate-700 dark:bg-slate-900">
+      <div className="page-shell grid gap-6 lg:grid-cols-2">
+        <section className="panel panel-pad">
           <h2 className="mb-4 flex items-center gap-2 font-semibold">
             <LifeBuoy size={18} /> Tickets
           </h2>
           <ul className="space-y-3">
             {tickets.map((t) => (
-              <li key={t.id} className="rounded-lg border border-border p-3 dark:border-slate-700">
+              <li key={t.id} className="list-item p-3">
                 <p className="font-medium">{t.subject}</p>
                 <p className="text-xs text-text-muted">
                   {t.companyId ? getCompany(t.companyId)?.name : 'No company'} · SLA{' '}
@@ -92,7 +92,7 @@ export function SupportPage() {
           </ul>
         </section>
         <section className="space-y-4">
-          <div className="rounded-xl border border-border bg-surface p-5 dark:border-slate-700 dark:bg-slate-900">
+          <div className="panel panel-pad">
             <h2 className="mb-3 font-semibold">Account health</h2>
             {companies.map((c) => (
               <div key={c.id} className="mb-2 flex justify-between text-sm">
@@ -105,7 +105,7 @@ export function SupportPage() {
               </div>
             ))}
           </div>
-          <div className="rounded-xl border border-border bg-surface p-5 dark:border-slate-700 dark:bg-slate-900">
+          <div className="panel panel-pad">
             <h2 className="mb-3 font-semibold">NPS / CSAT</h2>
             <div className="mb-4 space-y-3 rounded-lg border border-dashed border-border p-3 dark:border-slate-600">
               <p className="text-xs font-medium text-text-muted">Record a score (updates account health)</p>

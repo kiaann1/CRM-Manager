@@ -141,7 +141,7 @@ export function TasksPage() {
           </Button>
         }
       />
-      <div className="p-8">
+      <div className="page-shell">
         <div className="mb-6 flex flex-wrap gap-2">
           {filters.map((f) => (
             <button
@@ -176,7 +176,7 @@ export function TasksPage() {
             {sorted.map((task) => (
               <li
                 key={task.id}
-                className={`flex items-start gap-4 rounded-xl border border-border bg-surface p-4 shadow-sm ${
+                className={`flex items-start gap-4 list-item p-4 ${
                   task.status === 'done' ? 'opacity-60' : ''
                 }`}
               >

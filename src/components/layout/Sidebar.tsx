@@ -7,10 +7,10 @@ import {
   FileText,
   Handshake,
   Inbox,
-  Package,
   LayoutDashboard,
   LifeBuoy,
   Megaphone,
+  Package,
   Plug,
   Settings,
   Target,
@@ -18,63 +18,122 @@ import {
   Users,
   Zap,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useCrm } from '../../context/CrmContext'
 
-const links = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/contacts', label: 'Contacts', icon: Users },
-  { to: '/leads', label: 'Leads', icon: UserPlus },
-  { to: '/companies', label: 'Companies', icon: Building2 },
-  { to: '/deals', label: 'Deals', icon: Handshake },
-  { to: '/products', label: 'Products', icon: Package },
-  { to: '/tasks', label: 'Tasks', icon: CheckSquare },
-  { to: '/boards', label: 'Boards', icon: Columns },
-  { to: '/calendar', label: 'Calendar', icon: Calendar },
-  { to: '/goals', label: 'Goals', icon: Target },
-  { to: '/reports', label: 'Reports', icon: BarChart3 },
-  { to: '/automations', label: 'Automations', icon: Zap },
-  { to: '/integrations', label: 'Integrations', icon: Plug },
-  { to: '/marketing', label: 'Marketing', icon: Megaphone },
-  { to: '/support', label: 'Support', icon: LifeBuoy },
-  { to: '/inbox', label: 'Inbox', icon: Inbox },
-  { to: '/docs', label: 'Docs', icon: FileText },
-  { to: '/settings', label: 'Settings', icon: Settings },
+type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean; badge?: number }
+
+const sections: { title: string; items: NavItem[] }[] = [
+  {
+    title: 'Overview',
+    items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }],
+  },
+  {
+    title: 'CRM',
+    items: [
+      { to: '/contacts', label: 'Contacts', icon: Users },
+      { to: '/leads', label: 'Leads', icon: UserPlus },
+      { to: '/companies', label: 'Companies', icon: Building2 },
+      { to: '/deals', label: 'Deals', icon: Handshake },
+      { to: '/products', label: 'Products', icon: Package },
+    ],
+  },
+  {
+    title: 'Work',
+    items: [
+      { to: '/tasks', label: 'Tasks', icon: CheckSquare },
+      { to: '/boards', label: 'Boards', icon: Columns },
+      { to: '/calendar', label: 'Calendar', icon: Calendar },
+      { to: '/goals', label: 'Goals', icon: Target },
+      { to: '/docs', label: 'Docs', icon: FileText },
+    ],
+  },
+  {
+    title: 'Growth',
+    items: [
+      { to: '/reports', label: 'Reports', icon: BarChart3 },
+      { to: '/automations', label: 'Automations', icon: Zap },
+      { to: '/marketing', label: 'Marketing', icon: Megaphone },
+    ],
+  },
+  {
+    title: 'Connect',
+    items: [
+      { to: '/inbox', label: 'Inbox', icon: Inbox },
+      { to: '/support', label: 'Support', icon: LifeBuoy },
+      { to: '/integrations', label: 'Integrations', icon: Plug },
+    ],
+  },
 ]
 
 export function Sidebar() {
-  const { currentUser } = useCrm()
+  const { currentUser, notifications, inbox, session } = useCrm()
+
+  const unreadNotifs = notifications.filter((n) => n.userId === session?.userId && !n.read).length
+  const unreadInbox = inbox.filter((m) => !m.read).length
+
+  const itemsWithBadges = sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => {
+      if (item.to === '/inbox') return { ...item, badge: unreadInbox || undefined }
+      return item
+    }),
+  }))
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-surface">
-      <div className="flex items-center gap-2.5 border-b border-border px-4 py-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">
-          <Handshake size={18} />
+    <aside className="glass-panel flex w-[15.5rem] shrink-0 flex-col border-r border-border/80">
+      <div className="flex items-center gap-3 border-b border-border/80 px-4 py-4">
+        <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-lg shadow-brand-600/25">
+          <Handshake size={20} strokeWidth={2.25} />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-text">CRM Manager</p>
+          <p className="font-display truncate text-sm font-bold tracking-tight text-text">CRM Manager</p>
           <p className="truncate text-xs text-text-muted">{currentUser?.name ?? 'Guest'}</p>
         </div>
       </div>
-      <nav className="flex-1 overflow-y-auto p-2">
-        {links.map(({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              `mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300'
-                  : 'text-text-muted hover:bg-surface-muted hover:text-text'
-              }`
-            }
-          >
-            <Icon size={16} />
-            {label}
-          </NavLink>
+
+      <nav className="flex-1 overflow-y-auto px-2 py-3">
+        {itemsWithBadges.map((section) => (
+          <div key={section.title} className="mb-3">
+            <p className="nav-section-label">{section.title}</p>
+            <ul className="space-y-0.5">
+              {section.items.map(({ to, label, icon: Icon, end, badge }) => (
+                <li key={to}>
+                  <NavLink
+                    to={to}
+                    end={end}
+                    className={({ isActive }) =>
+                      `nav-link ${isActive ? 'nav-link-active' : ''}`
+                    }
+                  >
+                    <Icon size={16} strokeWidth={2} />
+                    <span className="flex-1 truncate">{label}</span>
+                    {badge != null && badge > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-[10px] font-bold text-white">
+                        {badge > 99 ? '99+' : badge}
+                      </span>
+                    )}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
       </nav>
+
+      <div className="border-t border-border/80 p-2">
+        <NavLink
+          to="/settings"
+          className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
+        >
+          <Settings size={16} />
+          <span className="flex-1">Settings</span>
+          {unreadNotifs > 0 && (
+            <span className="h-2 w-2 rounded-full bg-rose-500 ring-2 ring-surface" aria-label="Unread notifications" />
+          )}
+        </NavLink>
+      </div>
     </aside>
   )
 }

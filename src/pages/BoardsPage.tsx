@@ -119,7 +119,7 @@ export function BoardsPage() {
           </button>
         ))}
       </div>
-      <div className="p-8">
+      <div className="page-shell">
         {boards.length === 0 ? (
           <p className="text-sm text-text-muted">No boards in this workspace yet.</p>
         ) : view === 'board' ? (
@@ -127,7 +127,7 @@ export function BoardsPage() {
             {columns.map((col) => (
               <div
                 key={col.id}
-                className="w-72 shrink-0 rounded-xl border border-border bg-surface-muted dark:border-slate-700 dark:bg-slate-800/50"
+                className="w-72 shrink-0 panel bg-surface-muted/40"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => onDrop(e, col.id)}
               >
@@ -146,7 +146,7 @@ export function BoardsPage() {
                           setDraggingId(item.id)
                         }}
                         onDragEnd={() => setDraggingId(null)}
-                        className={`cursor-grab rounded-lg border border-border bg-surface p-3 shadow-sm active:cursor-grabbing dark:border-slate-600 dark:bg-slate-900 ${draggingId === item.id ? 'opacity-50' : ''}`}
+                        className={`list-item cursor-grab p-3 active:cursor-grabbing ${draggingId === item.id ? 'opacity-50' : ''}`}
                       >
                         <p className="text-sm font-medium">{item.title}</p>
                         <p className="text-xs text-text-muted">
@@ -165,7 +165,7 @@ export function BoardsPage() {
             ))}
           </div>
         ) : view === 'table' ? (
-          <table className="w-full rounded-xl border border-border bg-surface text-sm dark:border-slate-700 dark:bg-slate-900">
+          <table className="data-table">
             <thead>
               <tr className="bg-surface-muted dark:bg-slate-800">
                 <th className="px-4 py-2 text-left">Item</th>
@@ -192,7 +192,7 @@ export function BoardsPage() {
               .map((i) => (
                 <div
                   key={i.id}
-                  className="rounded-lg border border-border bg-surface p-4 dark:border-slate-700 dark:bg-slate-900"
+                  className="list-item p-4"
                 >
                   <p className="font-medium">{i.title}</p>
                   <p className="text-sm text-brand-600">{formatDate(i.dueDate!)}</p>

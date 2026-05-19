@@ -26,7 +26,7 @@ export function PipelineStageRow({
   const dirty = label !== stage.label || probability !== stage.probability
 
   return (
-    <li className="flex flex-wrap items-end gap-3 rounded-lg border border-border p-3 dark:border-slate-700">
+    <li className="flex flex-wrap items-end gap-3 list-item p-3">
       <span className={`rounded px-2 py-0.5 text-xs font-medium ${stage.color}`}>{stage.key}</span>
       <Input
         label="Label"

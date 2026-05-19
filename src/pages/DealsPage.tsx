@@ -192,7 +192,7 @@ export function DealsPage() {
       )}
 
       {deals.length === 0 ? (
-        <div className="p-8">
+        <div className="page-shell">
           <EmptyState
             icon={Handshake}
             title="No deals yet"
@@ -246,7 +246,7 @@ export function DealsPage() {
                     return (
                       <li
                         key={deal.id}
-                        className={`rounded-lg border border-border bg-surface p-2 shadow-sm ${
+                        className={`list-item p-2 ${
                           draggingId === deal.id ? 'opacity-50' : ''
                         }`}
                       >
@@ -296,9 +296,9 @@ export function DealsPage() {
           })}
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-surface px-2 pb-4 shadow-sm">
+        <div className="data-table-wrap px-2 pb-4">
           <table className="w-full table-fixed text-left text-sm">
-            <thead className="border-b border-border bg-surface-muted text-text-muted">
+            <thead>
               <tr>
                 <th className="w-[28%] px-2 py-2 font-medium">Deal</th>
                 <th className="w-[12%] px-2 py-2 font-medium">Value</th>

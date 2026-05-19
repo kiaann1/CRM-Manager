@@ -35,7 +35,7 @@ export function ListFilterBar({
   const [saveName, setSaveName] = useState('')
 
   return (
-    <div className="mb-4 flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 dark:border-slate-700 dark:bg-slate-900">
+    <div className="filter-bar">
       <div className="flex items-center gap-2 text-sm font-medium text-text">
         <Filter size={16} />
         Filters & saved views

@@ -226,7 +226,7 @@ export function RecordDrawer({
         <div className="flex-1 overflow-y-auto p-5">
           {tab === 'timeline' && (
             <div className="space-y-4">
-              <section className="rounded-lg border border-border p-3 dark:border-slate-700">
+              <section className="list-item p-3">
                 <p className="mb-2 text-xs font-semibold uppercase text-text-muted">Log activity</p>
                 <div className="mb-2 flex flex-wrap gap-1">
                   {(
@@ -274,7 +274,7 @@ export function RecordDrawer({
                   activities.map((a) => (
                     <li
                       key={a.id}
-                      className="rounded-lg border border-border p-3 dark:border-slate-700"
+                      className="list-item p-3"
                     >
                       <p className="text-xs font-medium uppercase text-text-muted">{a.type}</p>
                       <p className="font-medium">{a.subject}</p>
@@ -430,7 +430,7 @@ export function RecordDrawer({
           {tab === 'related' && (
             <ul className="space-y-3 text-sm">
               {contact && (
-                <li className="rounded-lg border border-border p-3 dark:border-slate-700">
+                <li className="list-item p-3">
                   <p className="text-xs text-text-muted">Contact</p>
                   <p className="font-medium">
                     {fullName(contact.firstName, contact.lastName)}
@@ -439,14 +439,14 @@ export function RecordDrawer({
                 </li>
               )}
               {company && (
-                <li className="rounded-lg border border-border p-3 dark:border-slate-700">
+                <li className="list-item p-3">
                   <p className="text-xs text-text-muted">Company</p>
                   <p className="font-medium">{company.name}</p>
                   <p className="text-text-muted">{company.industry}</p>
                 </li>
               )}
               {deal && (
-                <li className="rounded-lg border border-border p-3 dark:border-slate-700">
+                <li className="list-item p-3">
                   <p className="text-xs text-text-muted">Deal value</p>
                   <p className="font-medium capitalize">{deal.stage}</p>
                 </li>

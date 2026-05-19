@@ -99,7 +99,7 @@ export function LeadsPage() {
           <Button onClick={openCreate}><Plus size={16} /> Add lead</Button>
         </>
       } />
-      <div className="p-8">
+      <div className="page-shell">
         <ListFilterBar
           query={filters.query}
           onQueryChange={filters.setQuery}
@@ -127,8 +127,9 @@ export function LeadsPage() {
         ) : leads.length === 0 ? (
           <EmptyState icon={Users} title="No leads" description="Capture leads from forms or import CSV." action={<Button onClick={openCreate}>Add lead</Button>} />
         ) : (
-          <table className="w-full rounded-xl border border-border bg-surface text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900">
-            <thead className="bg-surface-muted text-left text-text-muted dark:bg-slate-800">
+          <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
               <tr><th className="px-4 py-3">Name</th><th>Score</th><th>Stage</th><th>Source</th><th>UTM</th><th>Owner</th><th /></tr>
             </thead>
             <tbody className="divide-y divide-border dark:divide-slate-700">
@@ -144,7 +145,7 @@ export function LeadsPage() {
                   return matchQ && matchStage && matchScore
                 })
                 .map((l) => (
-                <tr key={l.id} className="hover:bg-surface-muted dark:hover:bg-slate-800/50">
+                <tr key={l.id} className="table-row-hover">
                   <td className="px-4 py-3 font-medium"><button type="button" className="text-brand-600" onClick={() => setDrawer(l)}>{l.firstName} {l.lastName}</button></td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${l.score >= 70 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100'}`}>{l.score}</span></td>
                   <td className="px-4 py-3 capitalize">{l.stage}</td>
@@ -188,6 +189,7 @@ export function LeadsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
       <Modal

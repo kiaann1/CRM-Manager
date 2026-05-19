@@ -197,7 +197,7 @@ export function InboxPage() {
           return (
             <li
               key={m.id}
-              className={`rounded-xl border border-border bg-surface p-4 dark:border-slate-700 dark:bg-slate-900 ${
+              className={`panel panel-pad ${
                 m.read ? 'opacity-75' : 'border-brand-200 dark:border-brand-800'
               }`}
             >

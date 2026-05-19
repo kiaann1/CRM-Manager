@@ -40,7 +40,7 @@ export function DealContractsPanel({ dealId }: { dealId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border p-3 dark:border-slate-700">
+      <div className="list-item p-3">
         <p className="mb-2 text-xs font-semibold uppercase text-text-muted">New contract</p>
         <div className="space-y-2">
           <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />

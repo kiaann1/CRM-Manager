@@ -13,7 +13,7 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="relative rounded-lg p-2 text-text-muted hover:bg-slate-100 dark:hover:bg-slate-800"
+        className="btn-icon relative"
         aria-label="Notifications"
       >
         <Bell size={20} />

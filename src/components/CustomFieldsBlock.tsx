@@ -15,7 +15,7 @@ export function CustomFieldsBlock({ entityType, entityId }: CustomFieldsBlockPro
   if (defs.length === 0) return null
 
   return (
-    <section className="mb-4 rounded-lg border border-border p-3 dark:border-slate-700">
+    <section className="mb-4 list-item p-3">
       <p className="mb-2 text-xs font-semibold uppercase text-text-muted">Custom fields</p>
       <div className="space-y-3">
         {defs.map((def) => {

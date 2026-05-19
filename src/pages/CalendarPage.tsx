@@ -125,7 +125,7 @@ export function CalendarPage() {
           </Button>
         }
       />
-      <div className="p-8">
+      <div className="page-shell">
         {sorted.length === 0 ? (
           <EmptyState
             icon={Calendar}
@@ -143,7 +143,7 @@ export function CalendarPage() {
             {sorted.map((e) => (
               <li
                 key={e.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface px-4 py-3"
+                className="flex items-center justify-between gap-4 list-item px-4 py-3"
               >
                 <span>
                   <p className="font-medium text-text">{e.title}</p>

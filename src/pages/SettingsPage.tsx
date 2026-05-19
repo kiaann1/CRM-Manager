@@ -115,20 +115,20 @@ export function SettingsPage() {
         title="Settings"
         description="Profile, workspace, integrations, security, and data controls"
       />
-      <section className="flex flex-col gap-6 p-8 lg:flex-row">
+      <section className="page-shell flex flex-col gap-6 lg:flex-row">
         <nav className="flex shrink-0 flex-wrap gap-1 lg:w-44 lg:flex-col">
           {tabs.map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`rounded-lg px-3 py-2 text-left text-sm ${tab === t ? 'bg-brand-50 font-medium text-brand-700 dark:bg-brand-950' : 'text-text-muted hover:bg-surface-muted'}`}
+              className={`settings-tab ${tab === t ? 'settings-tab-active' : ''}`}
             >
               {t}
             </button>
           ))}
         </nav>
-        <article className="min-w-0 flex-1 rounded-xl border border-border bg-surface p-6 dark:border-slate-700 dark:bg-slate-900">
+        <article className="min-w-0 flex-1 panel panel-pad-lg">
           {tab === 'Profile' && (
             <div className="space-y-4">
               <p className="text-sm">
