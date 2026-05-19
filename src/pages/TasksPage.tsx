@@ -1,4 +1,4 @@
-import { Check, ListTodo, Plus, Trash2 } from 'lucide-react'
+import { Check, Clock, ListTodo, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { PageHeader } from '../components/layout/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -51,10 +51,14 @@ export function TasksPage() {
     updateTask,
     deleteTask,
     setTaskStatus,
+    logTime,
   } = useCrm()
   const toast = useToast()
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all')
   const [modalOpen, setModalOpen] = useState(false)
+  const [timeModal, setTimeModal] = useState<Task | null>(null)
+  const [logMinutes, setLogMinutes] = useState(30)
+  const [logNote, setLogNote] = useState('')
   const [editing, setEditing] = useState<Task | null>(null)
   const [form, setForm] = useState<TaskForm>(emptyForm)
 
@@ -226,8 +230,25 @@ export function TasksPage() {
                     <span className="text-xs capitalize text-text-muted">
                       {task.status.replace('_', ' ')}
                     </span>
+                    {task.loggedMinutes > 0 && (
+                      <span className="text-xs text-text-muted">
+                        · {task.loggedMinutes}m logged
+                      </span>
+                    )}
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  className="!p-2 shrink-0"
+                  onClick={() => {
+                    setTimeModal(task)
+                    setLogMinutes(30)
+                    setLogNote('')
+                  }}
+                  aria-label="Log time"
+                >
+                  <Clock size={16} />
+                </Button>
                 <Button
                   variant="ghost"
                   className="!p-2 shrink-0 text-rose-600"
@@ -322,6 +343,40 @@ export function TasksPage() {
             options={dealOptions}
           />
         </form>
+      </Modal>
+
+      <Modal
+        open={!!timeModal}
+        onClose={() => setTimeModal(null)}
+        title={timeModal ? `Log time — ${timeModal.title}` : 'Log time'}
+        footer={
+          <Button
+            onClick={() => {
+              if (!timeModal || logMinutes < 1) return
+              logTime(timeModal.id, logMinutes, logNote.trim() || undefined)
+              toast.success(`Logged ${logMinutes} minutes`)
+              setTimeModal(null)
+            }}
+          >
+            Save
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <Input
+            label="Minutes"
+            type="number"
+            min={1}
+            value={logMinutes}
+            onChange={(e) => setLogMinutes(Number(e.target.value) || 0)}
+          />
+          <Textarea
+            label="Note (optional)"
+            value={logNote}
+            onChange={(e) => setLogNote(e.target.value)}
+            rows={3}
+          />
+        </div>
       </Modal>
     </div>
   )

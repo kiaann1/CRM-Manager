@@ -215,7 +215,17 @@ export const defaultState: CrmState = {
     { id: 'n-1', userId: USER_SARAH, title: 'Approval pending', body: 'Discount approval needs your input.', read: false, createdAt: '2026-05-14T11:00:00Z' },
   ],
   inbox: [
-    { id: 'in-1', teamId: TEAM_SALES, from: 'support@acme.example', subject: 'Question about invoice', body: 'Can you clarify line 3?', read: false, receivedAt: '2026-05-15T08:00:00Z' },
+    {
+      id: 'in-1',
+      teamId: TEAM_SALES,
+      senderId: null,
+      recipientUserId: null,
+      from: 'support@acme.example',
+      subject: 'Question about invoice',
+      body: 'Can you clarify line 3?',
+      read: false,
+      receivedAt: '2026-05-15T08:00:00Z',
+    },
   ],
   forms: [
     {

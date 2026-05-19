@@ -18,6 +18,14 @@ export function fullName(first: string, last: string): string {
   return `${first} ${last}`.trim()
 }
 
+export function userInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return `${parts[0]!.charAt(0)}${parts[parts.length - 1]!.charAt(0)}`.toUpperCase()
+  }
+  return (parts[0]?.slice(0, 2) ?? '?').toUpperCase()
+}
+
 export const DEAL_STAGES = [
   { id: 'lead' as const, label: 'Lead', color: 'bg-slate-100 text-slate-700' },
   { id: 'qualified' as const, label: 'Qualified', color: 'bg-sky-100 text-sky-700' },

@@ -1,15 +1,21 @@
 import { Handshake } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Navigate } from 'react-router-dom'
-import { api } from '../../lib/api/client'
+import { Navigate, useNavigate } from 'react-router-dom'
+import { api, ApiError } from '../../lib/api/client'
 import { useCrm } from '../../context/CrmContext'
 import { useToast } from '../../context/ToastContext'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
+import { LoginSuccessSplash } from './LoginSuccessSplash'
+
+type LoginPhase = 'idle' | 'submitting' | 'success'
+
+const LOGIN_ANIMATION_MS = 1300
 
 export function LoginPage() {
   const { login, session } = useCrm()
   const toast = useToast()
+  const navigate = useNavigate()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('admin@crm.local')
   const [password, setPassword] = useState('demo1234')
@@ -17,16 +23,21 @@ export function LoginPage() {
   const [orgName, setOrgName] = useState('')
   const [error, setError] = useState('')
   const [sso, setSso] = useState({ google: false, microsoft: false, oidc: false })
+  const [phase, setPhase] = useState<LoginPhase>('idle')
 
   useEffect(() => {
     api.ssoProviders().then(setSso).catch(() => undefined)
   }, [])
 
-  if (session) return <Navigate to="/" replace />
+  if (session && phase === 'idle') {
+    return <Navigate to="/" replace />
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setPhase('submitting')
+
     try {
       if (mode === 'register') {
         await api.register({
@@ -38,24 +49,36 @@ export function LoginPage() {
         await login(email, password)
         toast.success('Account created')
       } else {
-        const ok = await login(email, password)
-        if (!ok) {
-          setError('Invalid email or password')
-          toast.error('Invalid email or password')
-        } else {
-          toast.success('Welcome back')
-        }
+        await login(email, password)
       }
+
+      setPhase('success')
+      await new Promise((resolve) => setTimeout(resolve, LOGIN_ANIMATION_MS))
+      navigate('/', { replace: true })
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Authentication failed'
+      setPhase('idle')
+      const msg =
+        err instanceof ApiError && err.status === 401
+          ? 'Invalid email or password'
+          : err instanceof Error
+            ? err.message
+            : 'Authentication failed'
       setError(msg)
       toast.error(msg)
     }
   }
 
+  const busy = phase !== 'idle'
+  const successMessage =
+    mode === 'register' ? 'Setting up your workspace…' : 'Opening your workspace…'
+
   return (
-    <div className="login-screen flex min-h-screen items-center justify-center bg-surface-muted p-4">
-      <article className="card w-full max-w-md p-8 shadow-xl">
+    <div className="login-screen relative flex min-h-screen items-center justify-center overflow-hidden bg-surface-muted p-4">
+      <article
+        className={`card w-full max-w-md p-8 shadow-xl transition-opacity ${
+          phase === 'success' ? 'login-card-exit' : busy ? 'login-card-dim' : ''
+        }`}
+      >
         <header className="mb-6 flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white">
             <Handshake size={22} />
@@ -100,12 +123,19 @@ export function LoginPage() {
         <form className="space-y-4" onSubmit={submit}>
           {mode === 'register' && (
             <>
-              <Input label="Your name" required value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                label="Your name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={busy}
+              />
               <Input
                 label="Organization name"
                 required
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
+                disabled={busy}
               />
             </>
           )}
@@ -115,6 +145,7 @@ export function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={busy}
           />
           <Input
             label="Password"
@@ -122,10 +153,20 @@ export function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={busy}
           />
           {error && <p className="text-sm text-rose-600">{error}</p>}
-          <Button type="submit" className="w-full">
-            {mode === 'login' ? 'Sign in' : 'Create account'}
+          <Button type="submit" className="w-full" disabled={busy}>
+            {phase === 'submitting' ? (
+              <>
+                <span className="login-btn-spinner" aria-hidden />
+                {mode === 'login' ? 'Signing in…' : 'Creating account…'}
+              </>
+            ) : mode === 'login' ? (
+              'Sign in'
+            ) : (
+              'Create account'
+            )}
           </Button>
         </form>
 
@@ -133,14 +174,24 @@ export function LoginPage() {
           {mode === 'login' ? (
             <>
               No account?{' '}
-              <button type="button" className="font-medium text-brand-600 hover:text-brand-700" onClick={() => setMode('register')}>
+              <button
+                type="button"
+                className="font-medium text-brand-600 hover:text-brand-700 disabled:opacity-50"
+                disabled={busy}
+                onClick={() => setMode('register')}
+              >
                 Register
               </button>
             </>
           ) : (
             <>
               Have an account?{' '}
-              <button type="button" className="font-medium text-brand-600 hover:text-brand-700" onClick={() => setMode('login')}>
+              <button
+                type="button"
+                className="font-medium text-brand-600 hover:text-brand-700 disabled:opacity-50"
+                disabled={busy}
+                onClick={() => setMode('login')}
+              >
                 Sign in
               </button>
             </>
@@ -150,6 +201,8 @@ export function LoginPage() {
           After seeding the DB: admin@crm.local / demo1234
         </p>
       </article>
+
+      {phase === 'success' && <LoginSuccessSplash message={successMessage} />}
     </div>
   )
 }

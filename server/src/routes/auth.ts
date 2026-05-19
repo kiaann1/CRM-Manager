@@ -113,8 +113,9 @@ authRouter.post('/login', async (req, res) => {
     res.status(400).json({ error: 'Invalid credentials' })
     return
   }
+  const email = parsed.data.email.trim().toLowerCase()
   const user = await prisma.user.findUnique({
-    where: { email: parsed.data.email },
+    where: { email },
     include: { memberships: true },
   })
   if (!user?.passwordHash) {

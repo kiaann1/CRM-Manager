@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useCrm } from '../context/CrmContext'
 
 export function NotificationBell() {
-  const { notifications, session, markNotificationRead } = useCrm()
+  const { notifications, session, markNotificationRead, markAllNotificationsRead } = useCrm()
   const [open, setOpen] = useState(false)
   const mine = notifications.filter((n) => n.userId === session?.userId)
   const unread = mine.filter((n) => !n.read).length
@@ -27,7 +27,18 @@ export function NotificationBell() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
           <div className="absolute right-0 z-50 mt-2 w-80 rounded-xl border border-border bg-surface shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <p className="border-b border-border px-4 py-3 text-sm font-semibold dark:border-slate-700">Notifications</p>
+            <div className="flex items-center justify-between border-b border-border px-4 py-3 dark:border-slate-700">
+              <p className="text-sm font-semibold">Notifications</p>
+              {unread > 0 && (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-brand-600 hover:underline"
+                  onClick={() => markAllNotificationsRead()}
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
             <ul className="max-h-72 overflow-y-auto">
               {mine.length === 0 ? (
                 <li className="px-4 py-6 text-center text-sm text-text-muted">All caught up</li>

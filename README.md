@@ -102,25 +102,39 @@ Core routes: `GET /api/v1/bootstrap`, CRUD for contacts/deals/companies/leads/ta
 
 ## What’s implemented
 
-### Phase 1–2 — Product UI (complete)
+### Product (UI)
 
-16 routed pages, record drawer, command palette, dark mode, CSV import/export, automations UI, marketing/support modules, reports, boards with multiple views, and a rich `CrmState` model.
+- **20+ routes** — dashboard, CRM objects (contacts, leads, companies, deals, products), tasks, boards, calendar, goals, reports, automations, marketing, support, inbox, docs, integrations, settings
+- **Record drawer** — activities, tasks, quotes, contracts, approvals, comments, files, related records
+- **Command palette** (⌘K), **quick-create FAB**, list filters, CSV import/export on contacts & leads
+- **Dashboard** — pipeline funnel, activity feed, AI-style next-best-action hints (heuristic)
+- **Docs** — full-page rich-text editor (`/docs/new`, `/docs/:id`), not a modal
+- **Inbox** — team channel + direct messages between users; inbound mail-style threads
+- **Integrations hub** — Slack, Teams, Gmail, Outlook, HubSpot, Zapier, Make, Stripe (configure, test, sync)
+- **UX** — dark mode, login success animation, workspace skeleton loader, header user menu (account / sign out)
 
-### Phase 3 — Platform (current)
+### Platform (API + data)
 
-- [x] **PostgreSQL** + Prisma multi-tenant `Organization` model
-- [x] **REST API** `/api/v1/*` with org-scoped data
-- [x] **Bootstrap** endpoint returns full workspace state for the React app
-- [x] **JWT auth** + refresh rotation (cookies)
-- [x] **Register** new organization (pipeline + default stages created)
-- [x] **SSO** Google, Microsoft Entra ID, generic OIDC (`openid-client`)
-- [x] **Webhooks** with HTTP dispatch on contact/deal events
-- [x] **API keys** for machine-to-machine access
-- [x] **Audit log** on server for key mutations
-- [x] **Docker Compose** for local Postgres
-- [x] **Vite proxy** so the SPA uses same-origin `/api` in dev
+- [x] **PostgreSQL** + Prisma, multi-tenant `Organization`
+- [x] **REST API** `/api/v1/*` — CRUD for core entities, bootstrap, preferences, pipeline stages
+- [x] **Auth** — register, login, refresh cookies, invites (`/invite/:token`), optional Google / Microsoft / OIDC SSO
+- [x] **Team invites** — email link, role on join (Settings → Team)
+- [x] **Webhooks** + **API keys** for external systems
+- [x] **Automations** — create/delete rules; deal stage change runs tasks + notifications + Slack/Teams
+- [x] **Audit log** on key mutations
+- [x] **Extras** — quotes, contracts, approvals, campaigns, time entries, NPS surveys, contact merge, file metadata
 
-Some UI actions still optimistically update or reload bootstrap only; extend `server/src/routes/v1` for tickets, automations, custom fields, etc. as you build out.
+### Known gaps (UI exists, backend partial or stub)
+
+| Area | Today |
+|------|--------|
+| Email send | Logged to timeline only — no SMTP / Gmail send |
+| Calendar | Local events; Gmail/Outlook sync is placeholder until OAuth jobs exist |
+| Saved views & segments | Types + UI hooks; `savedViews` / `segments` empty in bootstrap |
+| Files | Metadata in DB; no S3 / blob upload yet |
+| Marketing forms | Submissions in seed; limited public form POST API |
+| OpenAPI | Stub at `GET /api/v1/openapi` |
+| RBAC | Roles on users; not every route enforces manager/admin yet |
 
 ---
 
@@ -129,22 +143,26 @@ Some UI actions still optimistically update or reload bootstrap only; extend `se
 | Path | Page |
 |------|------|
 | `/login` | Sign in / register / SSO |
+| `/invite/:token` | Accept team invite |
 | `/` | Dashboard |
 | `/contacts` | Contacts |
 | `/leads` | Leads |
 | `/companies` | Companies |
 | `/deals` | Deals |
+| `/products` | Product catalog |
 | `/tasks` | Tasks |
 | `/boards` | Boards |
 | `/calendar` | Calendar |
 | `/goals` | Goals |
 | `/reports` | Reports |
 | `/automations` | Automations |
+| `/integrations` | Integrations hub (Slack, HubSpot, Stripe, etc.) |
 | `/marketing` | Marketing |
 | `/support` | Support |
-| `/inbox` | Inbox |
-| `/docs` | Documents |
-| `/settings` | Settings (incl. API keys & SSO status) |
+| `/inbox` | Team inbox & DMs |
+| `/docs` | Document list |
+| `/docs/new`, `/docs/:id` | Word-style doc editor |
+| `/settings` | Profile, team, webhooks, API keys, pipeline, audit |
 
 ---
 
@@ -177,6 +195,25 @@ CRM-Manager/
 | `npm run build` | Build server + SPA |
 | `npm run db:up` | Start Postgres container |
 | `npm run db:setup` | Push schema + seed demo org |
+
+**Login / bootstrap 500?** The database may be missing newer columns. Either run `npm run db:push --prefix server`, or paste `server/prisma/migrations/inbox-messaging.sql` into the [Neon SQL editor](https://console.neon.tech) and run it. Then restart `npm run dev`. Demo login: `admin@crm.local` / `demo1234`.
+
+---
+
+## Integrations
+
+Open **Integrations** in the sidebar (or Settings → Integrations). Each connector supports enable/disable, credential fields (masked after save), **Test connection**, and **Sync** where applicable.
+
+| Integration | What you need |
+|-------------|----------------|
+| **Slack** | Incoming webhook URL — deal stage changes post to the channel when enabled |
+| **Microsoft Teams** | Incoming webhook URL |
+| **Gmail / Outlook** | `GOOGLE_*` or `MICROSOFT_*` in `server/.env`, then **Connect** via OAuth |
+| **HubSpot** | Private app access token — **Sync** imports up to 5 sample contacts |
+| **Zapier / Make** | Optional catch hook URL; otherwise use Settings → Webhooks |
+| **Stripe** | Publishable key and/or webhook signing secret |
+
+Deal pipeline moves also notify enabled Slack/Teams webhooks automatically.
 
 ---
 

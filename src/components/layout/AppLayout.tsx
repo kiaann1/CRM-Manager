@@ -3,7 +3,9 @@ import { Outlet } from 'react-router-dom'
 import { CommandPalette } from '../CommandPalette'
 import { NotificationBell } from '../NotificationBell'
 import { CommandPaletteProvider, useCommandPalette } from '../../context/CommandPaletteContext'
+import { QuickCreateFab } from '../QuickCreateFab'
 import { Sidebar } from './Sidebar'
+import { UserMenu } from './UserMenu'
 
 function AppHeader() {
   const { setOpen } = useCommandPalette()
@@ -20,6 +22,7 @@ function AppHeader() {
         <kbd className="rounded bg-slate-100 px-1.5 text-xs dark:bg-slate-800">⌘K</kbd>
       </button>
       <NotificationBell />
+      <UserMenu />
     </header>
   )
 }
@@ -36,6 +39,7 @@ export function AppLayout() {
           </main>
         </div>
         <CommandPalette />
+        <QuickCreateFab />
       </div>
     </CommandPaletteProvider>
   )

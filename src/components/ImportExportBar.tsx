@@ -1,6 +1,7 @@
 import { Download, Upload } from 'lucide-react'
 import { useRef } from 'react'
 import { useCrm } from '../context/CrmContext'
+import { useToast } from '../context/ToastContext'
 import { downloadCsv, parseCsv, toCsv } from '../lib/csv'
 import { Button } from './ui/Button'
 
@@ -10,6 +11,7 @@ interface ImportExportBarProps {
 
 export function ImportExportBar({ entity }: ImportExportBarProps) {
   const crm = useCrm()
+  const toast = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const exportData = () => {
@@ -60,7 +62,10 @@ export function ImportExportBar({ entity }: ImportExportBarProps) {
     const reader = new FileReader()
     reader.onload = () => {
       const rows = parseCsv(String(reader.result))
-      if (entity === 'contacts' || entity === 'leads') crm.importRows(entity, rows)
+      if (entity === 'contacts' || entity === 'leads') {
+        crm.importRows(entity, rows)
+        toast.success(`Imported ${rows.length} ${entity}`)
+      }
     }
     reader.readAsText(file)
     e.target.value = ''

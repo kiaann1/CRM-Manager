@@ -13,6 +13,7 @@ import {
 import { api, ApiError } from '../lib/api/client'
 import { defaultState } from '../lib/storage'
 import type { CrmState, DealStage, TaskStatus, UserPreferences } from '../types'
+import { WorkspaceLoader } from '../components/layout/WorkspaceLoader'
 import type { CrmContextValue } from './CrmContext'
 
 const CrmApiContext = createContext<CrmContextValue | null>(null)
@@ -53,12 +54,16 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
   }, [state.preferences.theme])
 
   const login = useCallback(async (email: string, password: string) => {
+    await api.login(email, password)
     try {
-      await api.login(email, password)
       await reload()
-      return true
-    } catch {
-      return false
+    } catch (e) {
+      await api.logout().catch(() => undefined)
+      throw new Error(
+        e instanceof Error
+          ? `Signed in but workspace failed to load: ${e.message}`
+          : 'Signed in but workspace failed to load. Try npm run db:push --prefix server',
+      )
     }
   }, [reload])
 
@@ -122,6 +127,9 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
       setPreferences,
       resetDemoData,
       patch,
+      refreshWorkspace: async () => {
+        await reload()
+      },
       addCompany: (data) => {
         void after(() => api.createCompany(data))
       },
@@ -236,6 +244,9 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
       addCalendarEvent: (data) => {
         void after(() => api.createCalendarEvent(data))
       },
+      updateCalendarEvent: (id, data) => {
+        void after(() => api.updateCalendarEvent(id, data))
+      },
       deleteCalendarEvent: (id) => {
         void after(() => api.deleteCalendarEvent(id))
       },
@@ -257,57 +268,156 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
       deleteDocument: (id) => {
         void after(() => api.deleteDocument(id))
       },
-      addQuote: () => {
-        void reload()
+      addQuote: (data) => {
+        void after(() => api.createQuote(data))
       },
-      addContract: () => {
-        void reload()
+      updateQuote: (id, data) => {
+        void after(() => api.updateQuote(id, data))
+      },
+      deleteQuote: (id) => {
+        void after(() => api.deleteQuote(id))
+      },
+      addCampaign: (data) => {
+        void after(() => api.createCampaign(data))
+      },
+      updateCampaign: (id, data) => {
+        void after(() => api.updateCampaign(id, data))
+      },
+      deleteCampaign: (id) => {
+        void after(() => api.deleteCampaign(id))
+      },
+      updatePipelineStage: (id, data) => {
+        void after(() => api.updatePipelineStage(id, data))
+      },
+      addProduct: (data) => {
+        void after(() => api.createProduct(data))
+      },
+      updateProduct: (id, data) => {
+        void after(() => api.updateProduct(id, data))
+      },
+      deleteProduct: (id) => {
+        void after(() => api.deleteProduct(id))
+      },
+      createBoard: (name) => {
+        void after(() => api.createBoard({ name }))
+      },
+      addBoardItem: (data) => {
+        void after(() => api.createBoardItem(data))
+      },
+      moveBoardItem: (id, columnId) => {
+        void after(() => api.updateBoardItem(id, { columnId }))
+      },
+      deleteBoardItem: (id) => {
+        void after(() => api.deleteBoardItem(id))
+      },
+      requestApproval: (data) => {
+        void after(() => api.createApproval(data))
+      },
+      respondApproval: (id, status) => {
+        void after(() => api.updateApproval(id, { status }))
+      },
+      addSurvey: (data) => {
+        void after(() => api.createSurvey(data))
+      },
+      logTime: (taskId, minutes, note) => {
+        void after(() => api.logTimeEntry({ taskId, minutes, note }))
+      },
+      createTag: (name, color) => {
+        void after(() => api.createTag({ name, color }))
+      },
+      addContract: (data) => {
+        void after(() => api.createContract(data))
+      },
+      updateContract: (id, data) => {
+        void after(() => api.updateContract(id, data))
+      },
+      uploadFile: (data) => {
+        void after(() =>
+          api.uploadFile({
+            ...data,
+            storageKey: data.storageKey ?? undefined,
+          }),
+        )
+      },
+      deleteFile: (id) => {
+        void after(() => api.deleteFile(id))
+      },
+      sendInboxMessage: (data) => {
+        void after(() => api.sendInboxMessage(data))
+      },
+      markInboxRead: (id) => {
+        void after(() => api.markInboxRead(id))
+      },
+      markAllNotificationsRead: () => {
+        void after(() => api.markAllNotificationsRead())
       },
       addComment: (data) => {
         void after(() => api.createComment(data))
       },
       markNotificationRead: (id) => {
-        void patch((prev) => ({
-          ...prev,
-          notifications: prev.notifications.map((n) =>
-            n.id === id ? { ...n, read: true } : n,
-          ),
-        }))
+        void after(async () => {
+          await api.markNotificationRead(id)
+        })
       },
-      addTicket: () => {
-        void reload()
+      addTicket: (data) => {
+        void after(() => api.createTicket(data))
       },
-      updateTicket: () => {
-        void reload()
+      updateTicket: (id, data) => {
+        void after(() => api.updateTicket(id, data))
       },
-      addAutomation: () => {
-        void reload()
+      addAutomation: (data) => {
+        void after(() => api.createAutomation(data))
       },
-      updateAutomation: () => {
-        void reload()
+      updateAutomation: (id, data) => {
+        const enabled = data.enabled
+        if (enabled === undefined) return
+        void after(() => api.updateAutomation(id, { enabled }))
       },
-      mergeContacts: () => {
-        void reload()
+      deleteAutomation: (id) => {
+        void after(() => api.deleteAutomation(id))
       },
-      setCustomField: () => {
-        void reload()
+      mergeContacts: (primaryId, duplicateId) => {
+        void after(() => api.mergeContacts(primaryId, duplicateId))
       },
-      addCustomFieldDef: () => {
-        void reload()
+      setCustomField: (_entityType, entityId, fieldId, value) => {
+        void after(async () => {
+          await api.setCustomFieldValue({ fieldId, entityId, value })
+        })
       },
-      importRows: () => {
-        void reload()
+      addCustomFieldDef: (data) => {
+        void after(() => api.createCustomFieldDef(data))
+      },
+      importRows: (entity, rows) => {
+        void after(async () => {
+          if (entity === 'contacts') {
+            await api.importContacts(
+              rows.map((r) => ({
+                firstName: r.firstName ?? r.firstname ?? 'Unknown',
+                lastName: r.lastName ?? r.lastname ?? '',
+                email: r.email ?? '',
+                phone: r.phone ?? '',
+                title: r.title ?? '',
+              })),
+            )
+          } else {
+            await api.importLeads(
+              rows.map((r) => ({
+                firstName: r.firstName ?? r.firstname ?? 'Unknown',
+                lastName: r.lastName ?? r.lastname ?? '',
+                email: r.email ?? '',
+                company: r.company ?? '',
+                phone: r.phone ?? '',
+              })),
+            )
+          }
+        })
       },
       ...getters,
     }
   }, [state, login, logout, setPreferences, resetDemoData, patch, after, reload, uid])
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-surface-muted dark:bg-slate-950">
-        <p className="text-sm text-text-muted">Loading workspace…</p>
-      </div>
-    )
+    return <WorkspaceLoader />
   }
 
   return <CrmApiContext.Provider value={value}>{children}</CrmApiContext.Provider>

@@ -1,5 +1,6 @@
 import { Copy } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../components/layout/PageHeader'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
@@ -9,6 +10,7 @@ import { Button } from '../components/ui/Button'
 import { Select } from '../components/ui/Select'
 import { Input } from '../components/ui/Input'
 import { Textarea } from '../components/ui/Textarea'
+import { PipelineStageRow } from '../components/settings/PipelineStageRow'
 
 const tabs = [
   'Profile',
@@ -36,7 +38,19 @@ const WEBHOOK_EVENTS = [
 export function SettingsPage() {
   const crm = useCrm()
   const toast = useToast()
-  const [tab, setTab] = useState<(typeof tabs)[number]>('Profile')
+  const [searchParams] = useSearchParams()
+  const tabFromUrl = searchParams.get('tab')
+  const initialTab =
+    tabFromUrl && tabs.includes(tabFromUrl as (typeof tabs)[number])
+      ? (tabFromUrl as (typeof tabs)[number])
+      : 'Profile'
+  const [tab, setTab] = useState<(typeof tabs)[number]>(initialTab)
+
+  useEffect(() => {
+    if (tabFromUrl && tabs.includes(tabFromUrl as (typeof tabs)[number])) {
+      setTab(tabFromUrl as (typeof tabs)[number])
+    }
+  }, [tabFromUrl])
   const [newFieldLabel, setNewFieldLabel] = useState('')
   const [apiKeyName, setApiKeyName] = useState('')
   const [newApiKey, setNewApiKey] = useState<string | null>(null)
@@ -54,6 +68,7 @@ export function SettingsPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('rep')
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null)
+  const [newTagName, setNewTagName] = useState('')
 
   const canManageTeam =
     crm.currentUser?.role === 'admin' || crm.currentUser?.role === 'manager'
@@ -177,6 +192,24 @@ export function SettingsPage() {
                     <p className="text-sm text-text-muted">No tags configured</p>
                   )}
                 </div>
+                <div className="mt-3 flex max-w-sm gap-2">
+                  <Input
+                    label="New tag"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                  />
+                  <Button
+                    className="self-end"
+                    onClick={() => {
+                      if (!newTagName.trim()) return
+                      crm.createTag(newTagName.trim())
+                      setNewTagName('')
+                      toast.success('Tag created')
+                    }}
+                  >
+                    Add tag
+                  </Button>
+                </div>
               </section>
             </div>
           )}
@@ -209,49 +242,18 @@ export function SettingsPage() {
           {tab === 'Integrations' && (
             <div className="space-y-4">
               <p className="text-sm text-text-muted">
-                Connect external tools. OAuth credentials are configured in <code>server/.env</code>.
+                Configure Slack, HubSpot, Stripe, Gmail, and more on the integrations hub. OAuth for
+                Google/Microsoft is set in <code>server/.env</code>.
               </p>
-              <ul className="space-y-3">
-                {integrations.map((int) => (
-                  <li
-                    key={int.id}
-                    className="flex items-center justify-between rounded-lg border border-border px-4 py-3"
-                  >
-                    <div>
-                      <p className="font-medium text-sm">{int.name}</p>
-                      <p className="text-xs text-text-muted capitalize">{int.type}</p>
-                    </div>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={int.enabled}
-                        onChange={async (e) => {
-                          try {
-                            await api.updateIntegration(int.type, { enabled: e.target.checked })
-                            const enabled = e.target.checked
-                            setIntegrations((list) =>
-                              list.map((i) => (i.id === int.id ? { ...i, enabled } : i)),
-                            )
-                            crm.patch((prev) => ({
-                              ...prev,
-                              integrations: prev.integrations.map((i) =>
-                                i.id === int.id ? { ...i, enabled } : i,
-                              ),
-                            }))
-                            toast.success(`${int.name} ${enabled ? 'enabled' : 'disabled'}`)
-                          } catch {
-                            toast.error('Failed to update integration')
-                          }
-                        }}
-                      />
-                      Enabled
-                    </label>
-                  </li>
-                ))}
-                {integrations.length === 0 && (
-                  <p className="text-sm text-text-muted">No integrations in this workspace.</p>
-                )}
-              </ul>
+              <a
+                href="/integrations"
+                className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                Open integrations hub →
+              </a>
+              <p className="text-xs text-text-muted">
+                {integrations.filter((i) => i.enabled).length} of {integrations.length} enabled
+              </p>
             </div>
           )}
 
@@ -344,16 +346,19 @@ export function SettingsPage() {
           )}
 
           {tab === 'Pipeline' && (
-            <ul className="space-y-2">
-              {crm.pipelineStages
-                .sort((a, b) => a.order - b.order)
-                .map((s) => (
-                  <li key={s.id} className="flex justify-between text-sm">
-                    <span className={`rounded px-2 py-0.5 ${s.color}`}>{s.label}</span>
-                    <span>{s.probability}%</span>
-                  </li>
-                ))}
-            </ul>
+            <div className="space-y-4">
+              <p className="text-sm text-text-muted">
+                Edit win probability for forecasting. Stage keys are fixed; labels and probabilities
+                update live on the deals board.
+              </p>
+              <ul className="space-y-3">
+                {crm.pipelineStages
+                  .sort((a, b) => a.order - b.order)
+                  .map((s) => (
+                    <PipelineStageRow key={s.id} stage={s} onSave={crm.updatePipelineStage} />
+                  ))}
+              </ul>
+            </div>
           )}
 
           {tab === 'Fields' && (
@@ -382,7 +387,7 @@ export function SettingsPage() {
                         options: [],
                       })
                       setNewFieldLabel('')
-                      toast.info('Custom fields sync on next server update')
+                      toast.success('Custom field added')
                     }
                   }}
                 >

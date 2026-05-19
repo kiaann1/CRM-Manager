@@ -4,19 +4,28 @@ import { writeAudit } from '../../lib/audit.js'
 import { prisma } from '../../lib/prisma.js'
 import type { AuthRequest } from '../../middleware/auth.js'
 import { requireAuth } from '../../middleware/auth.js'
+import { computeLeadScore } from '../../lib/lead-score.js'
 import { buildBootstrap } from '../../services/bootstrap.js'
+import { runDealStageAutomations } from '../../services/automations.js'
 import { dispatchWebhooks } from '../../services/webhooks.js'
 import { createHash, randomBytes } from 'crypto'
+import { integrationsRouter } from '../integrations.js'
 import { invitesRouter } from '../invites.js'
+import { crmExtrasRouter } from '../crmExtras.js'
 
 export const v1Router = Router()
 v1Router.use(requireAuth)
 
 const param = (value: string | string[] | undefined) => String(value ?? '')
 
-v1Router.get('/bootstrap', async (req: AuthRequest, res) => {
-  const data = await buildBootstrap(req.auth!.orgId, req.auth!.sub)
-  res.json(data)
+v1Router.get('/bootstrap', async (req: AuthRequest, res, next) => {
+  try {
+    const data = await buildBootstrap(req.auth!.orgId, req.auth!.sub)
+    res.json(data)
+  } catch (err) {
+    console.error('[GET /api/v1/bootstrap]', err)
+    next(err)
+  }
 })
 
 // ——— Contacts ———
@@ -146,6 +155,9 @@ v1Router.patch('/deals/:id', async (req: AuthRequest, res) => {
       companyId: body.companyId,
       ownerId: body.ownerId,
       expectedClose: body.expectedClose ? new Date(body.expectedClose) : undefined,
+      tags: body.tagIds
+        ? { deleteMany: {}, create: body.tagIds.map((tagId) => ({ tagId })) }
+        : undefined,
     },
   })
   if (body.stageKey && body.stageKey !== existing.stageKey) {
@@ -154,6 +166,18 @@ v1Router.patch('/deals/:id', async (req: AuthRequest, res) => {
       from: existing.stageKey,
       to: body.stageKey,
     })
+    await runDealStageAutomations(
+      req.auth!.orgId,
+      {
+        id: deal.id,
+        title: deal.title,
+        stageKey: deal.stageKey,
+        ownerId: deal.ownerId,
+        contactId: deal.contactId,
+        companyId: deal.companyId,
+      },
+      existing.stageKey,
+    )
   }
   await writeAudit(req.auth!.orgId, req.auth!.sub, 'deal.updated', 'deal', deal.id)
   res.json(deal)
@@ -223,23 +247,36 @@ v1Router.post('/leads', async (req: AuthRequest, res) => {
       ownerId: z.string(),
       source: z.string().optional(),
       utmSource: z.string().optional(),
+      tagIds: z.array(z.string()).optional(),
     })
     .parse(req.body)
+  const stage = body.stage ?? 'new'
+  const leadData = {
+    email: body.email,
+    phone: body.phone ?? '',
+    stage,
+    utmSource: body.utmSource ?? '',
+  }
   const lead = await prisma.lead.create({
     data: {
       organizationId: req.auth!.orgId,
       firstName: body.firstName,
       lastName: body.lastName ?? '',
-      email: body.email,
-      phone: body.phone ?? '',
+      email: leadData.email,
+      phone: leadData.phone,
       company: body.company ?? '',
-      stage: body.stage ?? 'new',
+      stage,
       ownerId: body.ownerId,
       source: body.source ?? 'Manual',
-      utmSource: body.utmSource ?? '',
+      utmSource: leadData.utmSource,
+      score: computeLeadScore(leadData),
+      tags: body.tagIds?.length
+        ? { create: body.tagIds.map((tagId) => ({ tagId })) }
+        : undefined,
     },
+    include: { tags: true },
   })
-  res.status(201).json(lead)
+  res.status(201).json({ ...lead, tagIds: lead.tags.map((t) => t.tagId) })
 })
 
 v1Router.post('/leads/:id/convert', async (req: AuthRequest, res) => {
@@ -269,11 +306,46 @@ v1Router.post('/leads/:id/convert', async (req: AuthRequest, res) => {
 })
 
 v1Router.patch('/leads/:id', async (req: AuthRequest, res) => {
-  const lead = await prisma.lead.update({
+  const body = z
+    .object({
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+      email: z.string().email().optional(),
+      phone: z.string().optional(),
+      company: z.string().optional(),
+      stage: z.string().optional(),
+      ownerId: z.string().optional(),
+      source: z.string().optional(),
+      utmSource: z.string().optional(),
+      tagIds: z.array(z.string()).optional(),
+    })
+    .parse(req.body)
+  const existing = await prisma.lead.findFirst({
     where: { id: param(req.params.id), organizationId: req.auth!.orgId },
-    data: req.body,
   })
-  res.json(lead)
+  if (!existing) {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  const merged = {
+    email: body.email ?? existing.email,
+    phone: body.phone ?? existing.phone,
+    stage: body.stage ?? existing.stage,
+    utmSource: body.utmSource ?? existing.utmSource,
+  }
+  const { tagIds, ...rest } = body
+  const lead = await prisma.lead.update({
+    where: { id: existing.id },
+    data: {
+      ...rest,
+      score: computeLeadScore(merged),
+      tags: tagIds
+        ? { deleteMany: {}, create: tagIds.map((tagId) => ({ tagId })) }
+        : undefined,
+    },
+    include: { tags: true },
+  })
+  res.json({ ...lead, tagIds: lead.tags.map((t) => t.tagId) })
 })
 
 v1Router.delete('/leads/:id', async (req: AuthRequest, res) => {
@@ -358,6 +430,38 @@ v1Router.post('/calendar-events', async (req: AuthRequest, res) => {
     },
   })
   res.status(201).json(event)
+})
+
+v1Router.patch('/calendar-events/:id', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      title: z.string().min(1).optional(),
+      start: z.string().optional(),
+      end: z.string().optional(),
+      recordType: z.string().nullable().optional(),
+      recordId: z.string().nullable().optional(),
+      externalSync: z.enum(['none', 'google', 'outlook']).optional(),
+    })
+    .parse(req.body)
+  const existing = await prisma.calendarEvent.findFirst({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  if (!existing) {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  const event = await prisma.calendarEvent.update({
+    where: { id: existing.id },
+    data: {
+      title: body.title,
+      start: body.start ? new Date(body.start) : undefined,
+      end: body.end ? new Date(body.end) : undefined,
+      recordType: body.recordType,
+      recordId: body.recordId,
+      externalSync: body.externalSync,
+    },
+  })
+  res.json(event)
 })
 
 v1Router.delete('/calendar-events/:id', async (req: AuthRequest, res) => {
@@ -552,31 +656,6 @@ v1Router.post('/webhooks/:id/test', async (req: AuthRequest, res) => {
   res.json({ ok: true })
 })
 
-// ——— Integrations ———
-v1Router.patch('/integrations/:type', async (req: AuthRequest, res) => {
-  const body = z.object({ enabled: z.boolean(), config: z.record(z.unknown()).optional() }).parse(req.body)
-  const integration = await prisma.integrationConnection.upsert({
-    where: {
-        organizationId_type: {
-        organizationId: req.auth!.orgId,
-        type: param(req.params.type),
-      },
-    },
-    create: {
-      organizationId: req.auth!.orgId,
-      type: param(req.params.type),
-      name: param(req.params.type),
-      enabled: body.enabled,
-      config: (body.config ?? {}) as object,
-    },
-    update: {
-      enabled: body.enabled,
-      config: body.config as object | undefined,
-    },
-  })
-  res.json(integration)
-})
-
 // ——— API keys (programmatic access) ———
 v1Router.get('/api-keys', async (req: AuthRequest, res) => {
   const keys = await prisma.apiKey.findMany({
@@ -610,6 +689,159 @@ v1Router.post('/api-keys', async (req: AuthRequest, res) => {
 })
 
 v1Router.use('/invites', invitesRouter)
+v1Router.use('/integrations', integrationsRouter)
+v1Router.use(crmExtrasRouter)
+
+// ——— Tickets, automations, notifications ———
+v1Router.patch('/tickets/:id', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      status: z.string().optional(),
+      priority: z.string().optional(),
+      assigneeId: z.string().optional(),
+      subject: z.string().optional(),
+    })
+    .parse(req.body)
+  const ticket = await prisma.ticket.update({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+    data: body,
+  })
+  res.json(ticket)
+})
+
+v1Router.post('/automations', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      name: z.string().min(1),
+      enabled: z.boolean().optional(),
+      trigger: z.record(z.string(), z.unknown()),
+      actions: z.array(z.record(z.string(), z.unknown())).min(1),
+    })
+    .parse(req.body)
+  const rule = await prisma.automationRule.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      name: body.name.trim(),
+      enabled: body.enabled ?? true,
+      trigger: body.trigger,
+      actions: body.actions,
+    },
+  })
+  res.status(201).json(rule)
+})
+
+v1Router.patch('/automations/:id', async (req: AuthRequest, res) => {
+  const body = z.object({ enabled: z.boolean() }).parse(req.body)
+  const rule = await prisma.automationRule.update({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+    data: { enabled: body.enabled },
+  })
+  res.json(rule)
+})
+
+v1Router.delete('/automations/:id', async (req: AuthRequest, res) => {
+  await prisma.automationRule.delete({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  res.status(204).end()
+})
+
+v1Router.patch('/notifications/:id/read', async (req: AuthRequest, res) => {
+  const notification = await prisma.notification.findFirst({
+    where: { id: param(req.params.id), userId: req.auth!.sub },
+  })
+  if (!notification) {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  const updated = await prisma.notification.update({
+    where: { id: notification.id },
+    data: { read: true },
+  })
+  res.json(updated)
+})
+
+v1Router.post('/notifications/read-all', async (req: AuthRequest, res) => {
+  const result = await prisma.notification.updateMany({
+    where: { userId: req.auth!.sub, read: false },
+    data: { read: true },
+  })
+  res.json({ updated: result.count })
+})
+
+v1Router.post('/contacts/import', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      rows: z.array(
+        z.object({
+          firstName: z.string().min(1),
+          lastName: z.string().optional(),
+          email: z.string().email(),
+          phone: z.string().optional(),
+          title: z.string().optional(),
+        }),
+      ),
+    })
+    .parse(req.body)
+  let created = 0
+  for (const row of body.rows) {
+    await prisma.contact.create({
+      data: {
+        organizationId: req.auth!.orgId,
+        firstName: row.firstName,
+        lastName: row.lastName ?? '',
+        email: row.email,
+        phone: row.phone ?? '',
+        title: row.title ?? '',
+        ownerId: req.auth!.sub,
+      },
+    })
+    created++
+  }
+  res.status(201).json({ created })
+})
+
+v1Router.post('/leads/import', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      rows: z.array(
+        z.object({
+          firstName: z.string().min(1),
+          lastName: z.string().optional(),
+          email: z.string().email(),
+          company: z.string().optional(),
+          phone: z.string().optional(),
+        }),
+      ),
+    })
+    .parse(req.body)
+  let created = 0
+  for (const row of body.rows) {
+    const leadData = {
+      email: row.email,
+      phone: row.phone ?? '',
+      stage: 'new',
+      utmSource: 'import',
+    }
+    await prisma.lead.create({
+      data: {
+        organizationId: req.auth!.orgId,
+        firstName: row.firstName,
+        lastName: row.lastName ?? '',
+        email: row.email,
+        phone: leadData.phone,
+        company: row.company ?? '',
+        stage: 'new',
+        ownerId: req.auth!.sub,
+        source: 'CSV import',
+        utmSource: 'import',
+        score: computeLeadScore(leadData),
+      },
+    })
+    created++
+  }
+  res.status(201).json({ created })
+})
 
 // ——— User preferences ———
 v1Router.patch('/preferences', async (req: AuthRequest, res) => {

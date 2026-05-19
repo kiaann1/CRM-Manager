@@ -1,8 +1,17 @@
 import type { Prisma } from '@prisma/client'
+import { isInboxReadForUser, loadInboxForOrg, type InboxDbRow } from '../lib/inbox.js'
+import { ssoProviderEnabled } from '../config.js'
+import { INTEGRATION_CATALOG } from '../lib/integrations/catalog.js'
+import { maskConfig } from '../lib/integrations/mask.js'
 import { prisma } from '../lib/prisma.js'
+import { ensureOrgIntegrations } from './ensureIntegrations.js'
 
 /** Shape matches frontend `CrmState` for drop-in use */
 export async function buildBootstrap(orgId: string, userId: string) {
+  await ensureOrgIntegrations(orgId).catch((err) => {
+    console.warn('[bootstrap] Integrations seed skipped:', err)
+  })
+
   const membership = await prisma.membership.findUnique({
     where: { userId_organizationId: { userId, organizationId: orgId } },
     include: { user: { include: { preferences: true } } },
@@ -40,7 +49,6 @@ export async function buildBootstrap(orgId: string, userId: string) {
     approvals,
     comments,
     notifications,
-    inbox,
     forms,
     campaigns,
     tickets,
@@ -114,7 +122,6 @@ export async function buildBootstrap(orgId: string, userId: string) {
       orderBy: { createdAt: 'desc' },
       take: 100,
     }),
-    prisma.inboxMessage.findMany({ where: { organizationId: orgId } }),
     prisma.marketingForm.findMany({ where: { organizationId: orgId } }),
     prisma.campaign.findMany({ where: { organizationId: orgId } }),
     prisma.ticket.findMany({ where: { organizationId: orgId } }),
@@ -129,8 +136,23 @@ export async function buildBootstrap(orgId: string, userId: string) {
     }),
   ])
 
+  const inbox = await loadInboxForOrg(orgId).catch((err) => {
+    console.warn('[bootstrap] Inbox unavailable:', err)
+    return [] as InboxDbRow[]
+  })
+
   const pipeline = pipelines[0]
   const pipelineStages = pipeline?.stages ?? []
+
+  const visibleInbox = inbox.filter((m) => {
+    if (m.recipientUserId) {
+      return m.recipientUserId === userId || m.senderId === userId
+    }
+    if (m.teamId && membership.teamId && m.teamId !== membership.teamId) {
+      return false
+    }
+    return true
+  })
 
   const cfValues: Record<string, Record<string, Record<string, unknown>>> = {}
   for (const v of customFieldValues) {
@@ -385,6 +407,7 @@ export async function buildBootstrap(orgId: string, userId: string) {
       name: f.name,
       size: f.size,
       mimeType: f.mimeType,
+      storageKey: f.storageKey,
       uploadedAt: f.uploadedAt.toISOString(),
     })),
     automations: automations.map((a) => ({
@@ -406,12 +429,32 @@ export async function buildBootstrap(orgId: string, userId: string) {
       events: w.events,
       enabled: w.enabled,
     })),
-    integrations: integrations.map((i) => ({
-      id: i.id,
-      name: i.name,
-      type: i.type as 'slack' | 'teams' | 'zapier' | 'make',
-      enabled: i.enabled,
-    })),
+    integrations: integrations.map((i) => {
+      const catalog = INTEGRATION_CATALOG.find((c) => c.type === i.type)
+      const raw = (i.config ?? {}) as Record<string, unknown>
+      const ssoProvider = catalog?.ssoProvider
+      return {
+        id: i.id,
+        name: i.name,
+        type: i.type,
+        description: catalog?.description ?? '',
+        category: catalog?.category ?? 'automation',
+        enabled: i.enabled,
+        config: maskConfig(i.config),
+        fields: catalog?.fields ?? [],
+        docsUrl: catalog?.docsUrl,
+        ssoProvider,
+        ssoAvailable: ssoProvider
+          ? ssoProvider === 'google'
+            ? ssoProviderEnabled('google')
+            : ssoProviderEnabled('microsoft')
+          : false,
+        connected: Boolean(raw.connected ?? false),
+        lastSyncAt: (raw.lastSyncAt as string) ?? null,
+        lastTestAt: (raw.lastTestAt as string) ?? null,
+        lastTestOk: (raw.lastTestOk as boolean) ?? null,
+      }
+    }),
     approvals: approvals.map((a) => ({
       id: a.id,
       dealId: a.dealId,
@@ -438,13 +481,22 @@ export async function buildBootstrap(orgId: string, userId: string) {
       read: n.read,
       createdAt: n.createdAt.toISOString(),
     })),
-    inbox: inbox.map((m) => ({
+    inbox: visibleInbox.map((m) => ({
       id: m.id,
-      teamId: m.teamId,
+      teamId: m.teamId ?? null,
+      senderId: m.senderId ?? null,
+      recipientUserId: m.recipientUserId ?? null,
       from: m.from,
       subject: m.subject,
       body: m.body,
-      read: m.read,
+      read: isInboxReadForUser(
+        {
+          read: m.read,
+          readByUserIds: m.readByUserIds,
+          senderId: m.senderId ?? null,
+        },
+        userId,
+      ),
       receivedAt: m.receivedAt.toISOString(),
     })),
     forms: forms.map((f) => ({

@@ -74,6 +74,8 @@ model User {
   auditLogs      AuditLog[]
   notifications  Notification[]
   invitesSent    OrganizationInvite[] @relation("InvitesSent")
+  inboxSent      InboxMessage[]       @relation("InboxSent")
+  inboxReceived  InboxMessage[]       @relation("InboxReceived")
 }
 
 model OrganizationInvite {
@@ -687,16 +689,26 @@ model Survey {
 }
 
 model InboxMessage {
-  id             String   @id @default(cuid())
-  organizationId String
-  teamId         String
-  from           String
-  subject        String
-  body           String
-  read           Boolean  @default(false)
-  receivedAt     DateTime @default(now())
+  id              String   @id @default(cuid())
+  organizationId  String
+  teamId          String?
+  senderId        String?
+  recipientUserId String?
+  from            String
+  subject         String
+  body            String
+  read            Boolean  @default(false)
+  readByUserIds   Json     @default("[]")
+  receivedAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sender       User?        @relation("InboxSent", fields: [senderId], references: [id], onDelete: SetNull)
+  recipient    User?        @relation("InboxReceived", fields: [recipientUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([teamId])
+  @@index([recipientUserId])
+  @@index([senderId])
 }
 
 model TimeEntry {

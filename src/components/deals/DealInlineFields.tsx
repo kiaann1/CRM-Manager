@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useCrm } from '../../context/CrmContext'
 import type { Deal, DealStage } from '../../types'
-import { DEAL_STAGES } from '../../lib/format'
 
 const fieldClass =
   'w-full min-w-0 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-sm outline-none transition hover:border-border focus:border-brand-500 focus:bg-surface focus:ring-1 focus:ring-brand-500/20'
@@ -9,9 +9,18 @@ interface DealInlineFieldsProps {
   deal: Deal
   compact?: boolean
   onSave: (patch: Partial<Deal>) => void
+  onOpen?: () => void
 }
 
-export function DealInlineFields({ deal, compact, onSave }: DealInlineFieldsProps) {
+export function DealInlineFields({ deal, compact, onSave, onOpen }: DealInlineFieldsProps) {
+  const { pipelineStages } = useCrm()
+  const stages = useMemo(
+    () =>
+      [...pipelineStages]
+        .sort((a, b) => a.order - b.order)
+        .map((s) => ({ id: s.key, label: s.label, color: s.color })),
+    [pipelineStages],
+  )
   const [title, setTitle] = useState(deal.title)
   const [value, setValue] = useState(String(deal.value))
   const [stage, setStage] = useState(deal.stage)
@@ -81,12 +90,21 @@ export function DealInlineFields({ deal, compact, onSave }: DealInlineFieldsProp
         onChange={(e) => commitStage(e.target.value as DealStage)}
         aria-label="Stage"
       >
-        {DEAL_STAGES.map((s) => (
+        {stages.map((s) => (
           <option key={s.id} value={s.id}>
             {s.label}
           </option>
         ))}
       </select>
+      {onOpen && (
+        <button
+          type="button"
+          className="text-xs font-medium text-brand-600 hover:underline"
+          onClick={onOpen}
+        >
+          Open record →
+        </button>
+      )}
     </div>
   )
 }

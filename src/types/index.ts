@@ -324,6 +324,7 @@ export interface FileAttachment {
   name: string
   size: number
   mimeType: string
+  storageKey?: string | null
   uploadedAt: string
 }
 
@@ -361,11 +362,42 @@ export interface WebhookConfig {
   enabled: boolean
 }
 
+export type IntegrationType =
+  | 'slack'
+  | 'teams'
+  | 'gmail'
+  | 'outlook'
+  | 'zapier'
+  | 'make'
+  | 'hubspot'
+  | 'stripe'
+
+export type IntegrationCategory = 'communication' | 'calendar' | 'automation' | 'crm' | 'billing'
+
+export interface IntegrationFieldDef {
+  key: string
+  label: string
+  type: 'text' | 'password' | 'url'
+  placeholder?: string
+  required?: boolean
+}
+
 export interface Integration {
   id: string
   name: string
-  type: 'slack' | 'teams' | 'zapier' | 'make'
+  type: IntegrationType | string
+  description?: string
+  category?: IntegrationCategory | string
   enabled: boolean
+  config?: Record<string, unknown>
+  fields?: IntegrationFieldDef[]
+  docsUrl?: string
+  ssoProvider?: 'google' | 'microsoft'
+  ssoAvailable?: boolean
+  connected?: boolean
+  lastSyncAt?: string | null
+  lastTestAt?: string | null
+  lastTestOk?: boolean | null
 }
 
 export interface Approval {
@@ -399,7 +431,9 @@ export interface Notification {
 
 export interface InboxMessage {
   id: string
-  teamId: string
+  teamId: string | null
+  senderId: string | null
+  recipientUserId: string | null
   from: string
   subject: string
   body: string

@@ -1,4 +1,4 @@
-import { Calendar, Plus, Trash2 } from 'lucide-react'
+import { Calendar, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { PageHeader } from '../components/layout/PageHeader'
 import { useCrm } from '../context/CrmContext'
@@ -39,6 +39,7 @@ export function CalendarPage() {
   const {
     calendarEvents,
     addCalendarEvent,
+    updateCalendarEvent,
     deleteCalendarEvent,
     session,
     contacts,
@@ -48,6 +49,7 @@ export function CalendarPage() {
   } = useCrm()
   const toast = useToast()
   const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState<CalendarEvent | null>(null)
   const [form, setForm] = useState<EventForm>(() =>
     defaultForm(session?.userId ?? currentUser?.id ?? ''),
   )
@@ -78,12 +80,33 @@ export function CalendarPage() {
   const recordValue =
     form.recordType && form.recordId ? `${form.recordType}:${form.recordId}` : ''
 
+  const openEdit = (event: CalendarEvent) => {
+    setEditing(event)
+    setForm({
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      recordType: event.recordType,
+      recordId: event.recordId,
+      userId: event.userId,
+      externalSync: event.externalSync,
+    })
+    setModalOpen(true)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.title.trim()) return
-    addCalendarEvent({ ...form, title: form.title.trim() })
-    toast.success('Meeting scheduled')
+    const payload = { ...form, title: form.title.trim() }
+    if (editing) {
+      updateCalendarEvent(editing.id, payload)
+      toast.success('Meeting updated')
+    } else {
+      addCalendarEvent(payload)
+      toast.success('Meeting scheduled')
+    }
     setModalOpen(false)
+    setEditing(null)
   }
 
   const sorted = [...calendarEvents].sort(
@@ -130,19 +153,29 @@ export function CalendarPage() {
                     {e.externalSync !== 'none' && ` · Sync: ${e.externalSync}`}
                   </p>
                 </span>
-                <Button
-                  variant="ghost"
-                  className="!p-2 text-rose-600"
-                  aria-label="Delete meeting"
-                  onClick={() =>
-                    deleteConfirm(toast.askConfirm, e.title, () => {
-                      deleteCalendarEvent(e.id)
-                      toast.success('Meeting deleted')
-                    })
-                  }
-                >
-                  <Trash2 size={16} />
-                </Button>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    variant="ghost"
+                    className="!p-2"
+                    aria-label="Edit meeting"
+                    onClick={() => openEdit(e)}
+                  >
+                    <Pencil size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="!p-2 text-rose-600"
+                    aria-label="Delete meeting"
+                    onClick={() =>
+                      deleteConfirm(toast.askConfirm, e.title, () => {
+                        deleteCalendarEvent(e.id)
+                        toast.success('Meeting deleted')
+                      })
+                    }
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -151,8 +184,11 @@ export function CalendarPage() {
 
       <Modal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="Schedule meeting"
+        onClose={() => {
+          setModalOpen(false)
+          setEditing(null)
+        }}
+        title={editing ? 'Edit meeting' : 'Schedule meeting'}
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>

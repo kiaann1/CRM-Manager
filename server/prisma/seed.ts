@@ -63,7 +63,7 @@ async function main() {
     },
   })
 
-  await prisma.user.upsert({
+  const sarah = await prisma.user.upsert({
     where: { email: 'sarah@crm.local' },
     update: { passwordHash },
     create: {
@@ -100,7 +100,14 @@ async function main() {
     },
   })
 
-  await prisma.deal.create({
+  const enterpriseTag = org.tags.find((t) => t.name === 'Enterprise')!
+
+  await prisma.contact.update({
+    where: { id: contact.id },
+    data: { tags: { create: [{ tagId: enterpriseTag.id }] } },
+  })
+
+  const deal = await prisma.deal.create({
     data: {
       organizationId: org.id,
       title: 'Enterprise license renewal',
@@ -112,6 +119,107 @@ async function main() {
       companyId: company.id,
       ownerId: admin.id,
       expectedClose: new Date('2026-05-30'),
+      tags: { create: [{ tagId: enterpriseTag.id }] },
+    },
+  })
+
+  const product = await prisma.product.create({
+    data: {
+      organizationId: org.id,
+      name: 'Enterprise CRM License',
+      sku: 'ENT-001',
+      price: 12000,
+    },
+  })
+
+  await prisma.quote.create({
+    data: {
+      organizationId: org.id,
+      dealId: deal.id,
+      title: 'Q2 renewal quote',
+      status: 'sent',
+      lines: [{ productId: product.id, quantity: 4, unitPrice: 12000 }],
+    },
+  })
+
+  await prisma.customFieldDef.create({
+    data: {
+      organizationId: org.id,
+      entityType: 'deal',
+      label: 'Contract term (months)',
+      type: 'number',
+      options: [],
+    },
+  })
+
+  const board = await prisma.board.create({
+    data: {
+      organizationId: org.id,
+      name: 'Sales sprint',
+      isPrivate: false,
+      columns: {
+        create: [
+          { title: 'Backlog', order: 0 },
+          { title: 'In progress', order: 1 },
+          { title: 'Done', order: 2 },
+        ],
+      },
+    },
+    include: { columns: true },
+  })
+
+  const backlog = board.columns.find((c) => c.title === 'Backlog')!
+  const inProgress = board.columns.find((c) => c.title === 'In progress')!
+
+  await prisma.boardItem.createMany({
+    data: [
+      {
+        boardId: board.id,
+        columnId: backlog.id,
+        title: 'Prep renewal deck',
+        ownerId: admin.id,
+        order: 0,
+        recordType: 'deal',
+        recordId: deal.id,
+      },
+      {
+        boardId: board.id,
+        columnId: inProgress.id,
+        title: 'Legal review',
+        ownerId: admin.id,
+        order: 0,
+        dueDate: new Date('2026-06-01'),
+      },
+    ],
+  })
+
+  await prisma.ticket.create({
+    data: {
+      organizationId: org.id,
+      subject: 'SSO configuration help',
+      description: 'Need assistance enabling SAML for Acme Corp.',
+      status: 'open',
+      priority: 'high',
+      companyId: company.id,
+      contactId: contact.id,
+      assigneeId: admin.id,
+      slaDue: new Date('2026-05-25'),
+    },
+  })
+
+  await prisma.lead.create({
+    data: {
+      organizationId: org.id,
+      firstName: 'Alex',
+      lastName: 'Rivera',
+      email: 'alex@startup.example',
+      phone: '',
+      company: 'Startup.io',
+      stage: 'qualified',
+      ownerId: admin.id,
+      source: 'Website',
+      utmSource: 'google',
+      score: 65,
     },
   })
 
@@ -143,6 +251,74 @@ async function main() {
       enabled: true,
       trigger: { type: 'deal_stage_changed', stage: 'proposal' },
       actions: [{ type: 'notify', message: 'Deal entered proposal' }],
+    },
+  })
+
+  await prisma.contract.create({
+    data: {
+      organizationId: org.id,
+      dealId: deal.id,
+      title: 'Enterprise MSA 2026',
+      status: 'sent',
+      signUrl: 'https://sign.example/msa-acme',
+    },
+  })
+
+  await prisma.fileAttachment.create({
+    data: {
+      organizationId: org.id,
+      recordType: 'deal',
+      recordId: deal.id,
+      name: 'renewal-proposal.pdf',
+      size: 245_000,
+      mimeType: 'application/pdf',
+      storageKey: null,
+    },
+  })
+
+  await prisma.campaign.create({
+    data: {
+      organizationId: org.id,
+      name: 'Q2 Google Ads',
+      utmSource: 'google',
+      utmMedium: 'cpc',
+      budget: 5000,
+    },
+  })
+
+  await prisma.inboxMessage.create({
+    data: {
+      organizationId: org.id,
+      teamId: team.id,
+      from: 'jordan.lee@acme.example',
+      subject: 'Re: Q2 renewal timeline',
+      body: 'Hi team — can we confirm pricing before our board meeting on Friday? Thanks, Jordan',
+      read: false,
+      readByUserIds: [],
+    },
+  })
+
+  await prisma.inboxMessage.create({
+    data: {
+      organizationId: org.id,
+      teamId: team.id,
+      senderId: admin.id,
+      from: admin.name,
+      subject: 'Pipeline review Thursday',
+      body: 'Please update open deal stages before our 2pm sync.',
+      readByUserIds: [],
+    },
+  })
+
+  await prisma.inboxMessage.create({
+    data: {
+      organizationId: org.id,
+      senderId: sarah.id,
+      recipientUserId: admin.id,
+      from: sarah.name,
+      subject: 'Quick question on Acme',
+      body: 'Can you take the intro call tomorrow? I am out until noon.',
+      readByUserIds: [],
     },
   })
 

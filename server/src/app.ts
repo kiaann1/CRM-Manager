@@ -38,7 +38,9 @@ export function createApp() {
         res.status(400).json({ error: 'Validation failed', details: err })
         return
       }
-      res.status(500).json({ error: 'Internal server error' })
+      const message =
+        config.nodeEnv === 'development' && err instanceof Error ? err.message : 'Internal server error'
+      res.status(500).json({ error: message })
     },
   )
 

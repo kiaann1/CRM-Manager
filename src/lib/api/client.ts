@@ -1,4 +1,4 @@
-import type { CrmState } from '../../types'
+import type { CrmState, InboxMessage } from '../../types'
 
 /** Empty string = same-origin (Vite proxy to API in dev) */
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
@@ -150,11 +150,29 @@ export const api = {
   testWebhook: (id: string) =>
     request(`/api/v1/webhooks/${id}/test`, { method: 'POST' }),
 
-  updateIntegration: (type: string, data: { enabled: boolean; config?: object }) =>
+  listIntegrations: () =>
+    request<{
+      catalog: unknown[]
+      items: unknown[]
+      sso: { google: boolean; microsoft: boolean }
+    }>('/api/v1/integrations'),
+
+  updateIntegration: (type: string, data: { enabled?: boolean; config?: Record<string, unknown> }) =>
     request(`/api/v1/integrations/${type}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+
+  testIntegration: (type: string) =>
+    request<{ ok: boolean; message: string }>(`/api/v1/integrations/${type}/test`, {
+      method: 'POST',
+    }),
+
+  syncIntegration: (type: string) =>
+    request<{ ok: boolean; message: string; synced?: number }>(
+      `/api/v1/integrations/${type}/sync`,
+      { method: 'POST' },
+    ),
 
   listApiKeys: () =>
     request<
@@ -211,6 +229,158 @@ export const api = {
       '/api/auth/accept-invite',
       { method: 'POST', body: JSON.stringify(data) },
     ),
+
+  updateTicket: (id: string, data: unknown) =>
+    request(`/api/v1/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  updateAutomation: (id: string, data: { enabled: boolean }) =>
+    request(`/api/v1/automations/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  markNotificationRead: (id: string) =>
+    request(`/api/v1/notifications/${id}/read`, { method: 'PATCH' }),
+
+  markAllNotificationsRead: () =>
+    request<{ updated: number }>('/api/v1/notifications/read-all', { method: 'POST' }),
+
+  createProduct: (data: { name: string; sku: string; price: number }) =>
+    request('/api/v1/products', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateProduct: (id: string, data: Partial<{ name: string; sku: string; price: number }>) =>
+    request(`/api/v1/products/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteProduct: (id: string) =>
+    request(`/api/v1/products/${id}`, { method: 'DELETE' }),
+
+  createContract: (data: {
+    dealId: string
+    title: string
+    status?: string
+    signUrl?: string
+  }) => request('/api/v1/contracts', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateContract: (
+    id: string,
+    data: Partial<{ title: string; status: string; signUrl: string }>,
+  ) => request(`/api/v1/contracts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  uploadFile: (data: {
+    recordType: string
+    recordId: string
+    name: string
+    size: number
+    mimeType: string
+    storageKey?: string
+  }) => request('/api/v1/files', { method: 'POST', body: JSON.stringify(data) }),
+
+  deleteFile: (id: string) => request(`/api/v1/files/${id}`, { method: 'DELETE' }),
+
+  sendInboxMessage: (data: {
+    subject: string
+    body: string
+    teamId?: string
+    recipientUserId?: string
+  }) =>
+    request<InboxMessage>('/api/v1/inbox', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  markInboxRead: (id: string) =>
+    request(`/api/v1/inbox/${id}/read`, { method: 'PATCH' }),
+
+  mergeContacts: (primaryId: string, duplicateId: string) =>
+    request('/api/v1/contacts/merge', {
+      method: 'POST',
+      body: JSON.stringify({ primaryId, duplicateId }),
+    }),
+
+  importContacts: (rows: Record<string, string>[]) =>
+    request<{ created: number }>('/api/v1/contacts/import', {
+      method: 'POST',
+      body: JSON.stringify({ rows }),
+    }),
+
+  importLeads: (rows: Record<string, string>[]) =>
+    request<{ created: number }>('/api/v1/leads/import', {
+      method: 'POST',
+      body: JSON.stringify({ rows }),
+    }),
+
+  createTag: (data: { name: string; color?: string }) =>
+    request('/api/v1/tags', { method: 'POST', body: JSON.stringify(data) }),
+
+  createQuote: (data: unknown) =>
+    request('/api/v1/quotes', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateQuote: (id: string, data: unknown) =>
+    request(`/api/v1/quotes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteQuote: (id: string) => request(`/api/v1/quotes/${id}`, { method: 'DELETE' }),
+
+  createAutomation: (data: unknown) =>
+    request('/api/v1/automations', { method: 'POST', body: JSON.stringify(data) }),
+
+  deleteAutomation: (id: string) =>
+    request(`/api/v1/automations/${id}`, { method: 'DELETE' }),
+
+  updatePipelineStage: (
+    id: string,
+    data: Partial<{ label: string; probability: number; color: string }>,
+  ) =>
+    request(`/api/v1/pipeline-stages/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  createCampaign: (data: {
+    name: string
+    utmSource?: string
+    utmMedium?: string
+    budget?: number
+  }) => request('/api/v1/campaigns', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateCampaign: (
+    id: string,
+    data: Partial<{ name: string; utmSource: string; utmMedium: string; budget: number }>,
+  ) => request(`/api/v1/campaigns/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteCampaign: (id: string) => request(`/api/v1/campaigns/${id}`, { method: 'DELETE' }),
+
+  createBoard: (data: { name: string }) =>
+    request('/api/v1/boards', { method: 'POST', body: JSON.stringify(data) }),
+
+  createApproval: (data: { dealId: string; title: string; approverId: string }) =>
+    request('/api/v1/approvals', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateApproval: (id: string, data: { status: 'approved' | 'rejected' }) =>
+    request(`/api/v1/approvals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  createSurvey: (data: { companyId: string; score: number; feedback?: string }) =>
+    request('/api/v1/surveys', { method: 'POST', body: JSON.stringify(data) }),
+
+  logTimeEntry: (data: { taskId: string; minutes: number; note?: string }) =>
+    request('/api/v1/time-entries', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateCalendarEvent: (id: string, data: unknown) =>
+    request(`/api/v1/calendar-events/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  createCustomFieldDef: (data: unknown) =>
+    request('/api/v1/custom-field-defs', { method: 'POST', body: JSON.stringify(data) }),
+
+  setCustomFieldValue: (data: { fieldId: string; entityId: string; value: unknown }) =>
+    request('/api/v1/custom-field-values', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  createTicket: (data: unknown) =>
+    request('/api/v1/tickets', { method: 'POST', body: JSON.stringify(data) }),
+
+  createBoardItem: (data: unknown) =>
+    request('/api/v1/board-items', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateBoardItem: (id: string, data: unknown) =>
+    request(`/api/v1/board-items/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteBoardItem: (id: string) =>
+    request(`/api/v1/board-items/${id}`, { method: 'DELETE' }),
 
   openapi: () => request('/api/v1/openapi'),
 }

@@ -11,6 +11,7 @@ const pages = [
   { label: 'Leads', path: '/leads' },
   { label: 'Companies', path: '/companies' },
   { label: 'Deals', path: '/deals' },
+  { label: 'Products', path: '/products' },
   { label: 'Tasks', path: '/tasks' },
   { label: 'Boards', path: '/boards' },
   { label: 'Calendar', path: '/calendar' },
@@ -208,7 +209,7 @@ export function CommandPalette() {
           {results.documents.length > 0 && (
             <Section title="Docs">
               {results.documents.map((d) => (
-                <Item key={d.id} icon={FileText} label={d.title} onClick={() => go('/docs')} />
+                <Item key={d.id} icon={FileText} label={d.title} onClick={() => go(`/docs/${d.id}`)} />
               ))}
             </Section>
           )}

@@ -1,0 +1,6 @@
+/** Strip HTML tags for previews and empty checks */
+export function stripHtml(html: string): string {
+  if (!html) return ''
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  return (doc.body.textContent ?? '').trim()
+}

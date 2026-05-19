@@ -7,9 +7,11 @@ import {
   FileText,
   Handshake,
   Inbox,
+  Package,
   LayoutDashboard,
   LifeBuoy,
   Megaphone,
+  Plug,
   Settings,
   Target,
   UserPlus,
@@ -25,12 +27,14 @@ const links = [
   { to: '/leads', label: 'Leads', icon: UserPlus },
   { to: '/companies', label: 'Companies', icon: Building2 },
   { to: '/deals', label: 'Deals', icon: Handshake },
+  { to: '/products', label: 'Products', icon: Package },
   { to: '/tasks', label: 'Tasks', icon: CheckSquare },
   { to: '/boards', label: 'Boards', icon: Columns },
   { to: '/calendar', label: 'Calendar', icon: Calendar },
   { to: '/goals', label: 'Goals', icon: Target },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/automations', label: 'Automations', icon: Zap },
+  { to: '/integrations', label: 'Integrations', icon: Plug },
   { to: '/marketing', label: 'Marketing', icon: Megaphone },
   { to: '/support', label: 'Support', icon: LifeBuoy },
   { to: '/inbox', label: 'Inbox', icon: Inbox },
@@ -39,7 +43,7 @@ const links = [
 ]
 
 export function Sidebar() {
-  const { currentUser, logout } = useCrm()
+  const { currentUser } = useCrm()
 
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-surface">
@@ -71,11 +75,6 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
-      <div className="border-t border-border p-3">
-        <button type="button" onClick={logout} className="w-full rounded-lg px-2 py-2 text-left text-xs text-text-muted hover:bg-surface-muted">
-          Sign out
-        </button>
-      </div>
     </aside>
   )
 }

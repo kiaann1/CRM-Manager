@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { PageHeader } from '../components/layout/PageHeader'
 import { StatCard } from '../components/StatCard'
 import { useCrm } from '../context/CrmContext'
-import { DEAL_STAGES, formatCurrency } from '../lib/format'
+import { formatCurrency } from '../lib/format'
 import { downloadCsv, toCsv } from '../lib/csv'
 import { BarChart3, Download, TrendingUp } from 'lucide-react'
 import { Button } from '../components/ui/Button'
@@ -14,12 +14,15 @@ export function ReportsPage() {
   const userId = crm.session?.userId ?? USER_SARAH
 
   const funnel = useMemo(() => {
-    return DEAL_STAGES.filter((s) => s.id !== 'lost').map((stage) => ({
-      stage: stage.label,
-      count: crm.deals.filter((d) => d.stage === stage.id).length,
-      value: crm.deals.filter((d) => d.stage === stage.id).reduce((s, d) => s + d.value, 0),
-    }))
-  }, [crm.deals])
+    return [...crm.pipelineStages]
+      .sort((a, b) => a.order - b.order)
+      .filter((s) => s.key !== 'lost')
+      .map((stage) => ({
+        stage: stage.label,
+        count: crm.deals.filter((d) => d.stage === stage.key).length,
+        value: crm.deals.filter((d) => d.stage === stage.key).reduce((s, d) => s + d.value, 0),
+      }))
+  }, [crm.deals, crm.pipelineStages])
 
   const weighted = crm.deals
     .filter((d) => d.stage !== 'won' && d.stage !== 'lost')

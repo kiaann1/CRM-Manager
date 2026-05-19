@@ -1,6 +1,7 @@
 import type {
   Activity,
   AutomationRule,
+  BoardItem,
   CalendarEvent,
   Comment,
   Company,
@@ -25,11 +26,12 @@ import type {
 
 export interface CrmContextValue extends CrmState {
   currentUser: CrmState['users'][0] | undefined
-  login: (email: string, password: string) => boolean | Promise<boolean>
+  login: (email: string, password: string) => Promise<void>
   logout: () => void | Promise<void>
   setPreferences: (prefs: Partial<UserPreferences>) => void
   resetDemoData: () => void
   patch: (updater: (prev: CrmState) => CrmState) => void
+  refreshWorkspace: () => Promise<void>
   addCompany: (data: Omit<Company, 'id' | 'createdAt'>) => void
   updateCompany: (id: string, data: Partial<Company>) => void
   deleteCompany: (id: string) => void
@@ -51,6 +53,7 @@ export interface CrmContextValue extends CrmState {
   addActivity: (data: Omit<Activity, 'id' | 'at'>) => void
   logEmail: (data: Omit<EmailLog, 'id' | 'sentAt'>) => void
   addCalendarEvent: (data: Omit<CalendarEvent, 'id'>) => void
+  updateCalendarEvent: (id: string, data: Partial<CalendarEvent>) => void
   deleteCalendarEvent: (id: string) => void
   addGoal: (data: Omit<Goal, 'id'>) => void
   updateGoal: (id: string, data: Partial<Goal>) => void
@@ -59,7 +62,40 @@ export interface CrmContextValue extends CrmState {
   updateDocument: (id: string, data: Partial<Document>) => void
   deleteDocument: (id: string) => void
   addQuote: (data: Omit<Quote, 'id' | 'createdAt'>) => void
+  updateQuote: (id: string, data: Partial<Quote>) => void
+  deleteQuote: (id: string) => void
+  addCampaign: (data: Omit<CrmState['campaigns'][0], 'id'>) => void
+  updateCampaign: (id: string, data: Partial<CrmState['campaigns'][0]>) => void
+  deleteCampaign: (id: string) => void
+  updatePipelineStage: (
+    id: string,
+    data: Partial<Pick<import('../types').PipelineStageConfig, 'label' | 'probability' | 'color'>>,
+  ) => void
+  deleteAutomation: (id: string) => void
+  addProduct: (data: Omit<CrmState['products'][0], 'id'>) => void
+  updateProduct: (id: string, data: Partial<CrmState['products'][0]>) => void
+  deleteProduct: (id: string) => void
+  createBoard: (name: string) => void
+  addBoardItem: (data: Omit<BoardItem, 'id'>) => void
+  moveBoardItem: (id: string, columnId: string) => void
+  deleteBoardItem: (id: string) => void
+  requestApproval: (data: { dealId: string; title: string; approverId: string }) => void
+  respondApproval: (id: string, status: 'approved' | 'rejected') => void
+  addSurvey: (data: { companyId: string; score: number; feedback?: string }) => void
+  logTime: (taskId: string, minutes: number, note?: string) => void
+  createTag: (name: string, color?: string) => void
   addContract: (data: Omit<Contract, 'id' | 'createdAt'>) => void
+  updateContract: (id: string, data: Partial<Contract>) => void
+  uploadFile: (data: Omit<FileAttachment, 'id' | 'uploadedAt'>) => void
+  deleteFile: (id: string) => void
+  sendInboxMessage: (data: {
+    subject: string
+    body: string
+    teamId?: string
+    recipientUserId?: string
+  }) => void
+  markInboxRead: (id: string) => void
+  markAllNotificationsRead: () => void
   addComment: (data: Omit<Comment, 'id' | 'createdAt'>) => void
   markNotificationRead: (id: string) => void
   addTicket: (data: Omit<Ticket, 'id' | 'createdAt'>) => void

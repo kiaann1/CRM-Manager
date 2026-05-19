@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { GitMerge, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
 import { PageHeader } from '../components/layout/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -12,7 +12,10 @@ import { deleteConfirm } from '../lib/confirm'
 import type { Contact } from '../types'
 import { fullName } from '../lib/format'
 import { ImportExportBar } from '../components/ImportExportBar'
+import { ListFilterBar } from '../components/ListFilterBar'
 import { RecordDrawer } from '../components/RecordDrawer'
+import { TagPicker } from '../components/TagPicker'
+import { useListFilters } from '../hooks/useListFilters'
 import { USER_SARAH } from '../lib/ids'
 
 type ContactForm = Omit<Contact, 'id' | 'createdAt'>
@@ -30,17 +33,22 @@ const emptyForm: ContactForm = {
 }
 
 export function ContactsPage() {
-  const { contacts, companies, addContact, updateContact, deleteContact, getCompany } = useCrm()
+  const { contacts, companies, addContact, updateContact, deleteContact, getCompany, mergeContacts } =
+    useCrm()
   const toast = useToast()
-  const [search, setSearch] = useState('')
+  const filters = useListFilters('contacts')
   const [modalOpen, setModalOpen] = useState(false)
+  const [mergeOpen, setMergeOpen] = useState(false)
+  const [mergePrimary, setMergePrimary] = useState('')
+  const [mergeDuplicate, setMergeDuplicate] = useState('')
   const [editing, setEditing] = useState<Contact | null>(null)
   const [form, setForm] = useState<ContactForm>(emptyForm)
   const [drawer, setDrawer] = useState<Contact | null>(null)
 
   const filtered = contacts.filter((c) => {
     const name = fullName(c.firstName, c.lastName).toLowerCase()
-    const q = search.toLowerCase()
+    const q = filters.query.toLowerCase()
+    if (!q) return true
     return (
       name.includes(q) ||
       c.email.toLowerCase().includes(q) ||
@@ -95,6 +103,11 @@ export function ContactsPage() {
         actions={
           <>
             <ImportExportBar entity="contacts" />
+            {contacts.length >= 2 && (
+              <Button variant="secondary" onClick={() => setMergeOpen(true)}>
+                <GitMerge size={16} /> Merge
+              </Button>
+            )}
             <Button onClick={openCreate}>
               <Plus size={16} />
               Add contact
@@ -103,12 +116,13 @@ export function ContactsPage() {
         }
       />
       <div className="p-8">
-        <input
-          type="search"
-          placeholder="Search contacts..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="form-control mb-6 max-w-md"
+        <ListFilterBar
+          query={filters.query}
+          onQueryChange={filters.setQuery}
+          saved={filters.saved}
+          onSave={filters.saveCurrent}
+          onApply={filters.apply}
+          onRemove={filters.remove}
         />
 
         {filtered.length === 0 ? (
@@ -116,12 +130,12 @@ export function ContactsPage() {
             icon={Users}
             title="No contacts found"
             description={
-              search
+              filters.query
                 ? 'Try a different search term.'
                 : 'Add your first contact to get started.'
             }
             action={
-              !search ? (
+              !filters.query ? (
                 <Button onClick={openCreate}>
                   <Plus size={16} />
                   Add contact
@@ -251,7 +265,62 @@ export function ContactsPage() {
             }
             options={companyOptions}
           />
+          <TagPicker value={form.tagIds} onChange={(tagIds) => setForm({ ...form, tagIds })} />
         </form>
+      </Modal>
+      <Modal
+        open={mergeOpen}
+        onClose={() => setMergeOpen(false)}
+        title="Merge contacts"
+        footer={
+          <Button
+            onClick={() => {
+              if (!mergePrimary || !mergeDuplicate || mergePrimary === mergeDuplicate) {
+                toast.error('Pick two different contacts')
+                return
+              }
+              mergeContacts(mergePrimary, mergeDuplicate)
+              toast.success('Contacts merged')
+              setMergeOpen(false)
+              setMergePrimary('')
+              setMergeDuplicate('')
+            }}
+          >
+            Merge
+          </Button>
+        }
+      >
+        <p className="mb-4 text-sm text-text-muted">
+          Keeps the primary contact and moves timeline, tasks, and deals from the duplicate.
+        </p>
+        <div className="space-y-4">
+          <Select
+            label="Keep (primary)"
+            value={mergePrimary}
+            onChange={(e) => setMergePrimary(e.target.value)}
+            options={[
+              { value: '', label: 'Select…' },
+              ...contacts.map((c) => ({
+                value: c.id,
+                label: fullName(c.firstName, c.lastName),
+              })),
+            ]}
+          />
+          <Select
+            label="Merge into primary (will be deleted)"
+            value={mergeDuplicate}
+            onChange={(e) => setMergeDuplicate(e.target.value)}
+            options={[
+              { value: '', label: 'Select…' },
+              ...contacts
+                .filter((c) => c.id !== mergePrimary)
+                .map((c) => ({
+                  value: c.id,
+                  label: fullName(c.firstName, c.lastName),
+                })),
+            ]}
+          />
+        </div>
       </Modal>
       {drawer && (
         <RecordDrawer

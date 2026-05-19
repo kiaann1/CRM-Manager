@@ -8,6 +8,9 @@ import { Modal } from '../components/ui/Modal'
 import { Select } from '../components/ui/Select'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
+import { ListFilterBar } from '../components/ListFilterBar'
+import { RecordDrawer } from '../components/RecordDrawer'
+import { useListFilters } from '../hooks/useListFilters'
 import { deleteConfirm } from '../lib/confirm'
 import type { Company } from '../types'
 
@@ -50,17 +53,22 @@ export function CompaniesPage() {
     currentUser,
   } = useCrm()
   const toast = useToast()
-  const [search, setSearch] = useState('')
+  const filters = useListFilters('companies')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Company | null>(null)
   const [form, setForm] = useState<CompanyForm>(() =>
     emptyForm(currentUser?.id ?? users[0]?.id ?? ''),
   )
+  const [drawerCompanyId, setDrawerCompanyId] = useState<string | null>(null)
+  const drawerCompany = drawerCompanyId
+    ? companies.find((c) => c.id === drawerCompanyId)
+    : undefined
 
   const ownerId = currentUser?.id ?? users[0]?.id ?? ''
 
   const filtered = companies.filter((c) => {
-    const q = search.toLowerCase()
+    const q = filters.query.toLowerCase()
+    if (!q) return true
     return c.name.toLowerCase().includes(q) || c.industry.toLowerCase().includes(q)
   })
 
@@ -129,12 +137,13 @@ export function CompaniesPage() {
         }
       />
       <div className="p-8">
-        <input
-          type="search"
-          placeholder="Search companies..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="form-control mb-6 max-w-md"
+        <ListFilterBar
+          query={filters.query}
+          onQueryChange={filters.setQuery}
+          saved={filters.saved}
+          onSave={filters.saveCurrent}
+          onApply={filters.apply}
+          onRemove={filters.remove}
         />
 
         {filtered.length === 0 ? (
@@ -142,12 +151,12 @@ export function CompaniesPage() {
             icon={Building2}
             title="No companies found"
             description={
-              search
+              filters.query
                 ? 'Try a different search term.'
                 : 'Add your first company to get started.'
             }
             action={
-              !search ? (
+              !filters.query ? (
                 <Button onClick={openCreate}>
                   <Plus size={16} />
                   Add company
@@ -165,6 +174,13 @@ export function CompaniesPage() {
                     <p className="text-sm text-text-muted">{company.industry || '—'}</p>
                   </div>
                   <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      className="!px-2 !py-1 text-xs"
+                      onClick={() => setDrawerCompanyId(company.id)}
+                    >
+                      View
+                    </Button>
                     <Button
                       variant="ghost"
                       className="!p-2"
@@ -332,6 +348,15 @@ export function CompaniesPage() {
           </fieldset>
         </form>
       </Modal>
+
+      {drawerCompany && (
+        <RecordDrawer
+          recordType="company"
+          recordId={drawerCompany.id}
+          title={drawerCompany.name}
+          onClose={() => setDrawerCompanyId(null)}
+        />
+      )}
     </div>
   )
 }

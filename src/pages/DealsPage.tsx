@@ -1,5 +1,5 @@
 import { GripVertical, Handshake, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useState, type DragEvent } from 'react'
+import { useCallback, useMemo, useState, type DragEvent } from 'react'
 import { DealInlineFields } from '../components/deals/DealInlineFields'
 import { DealTableRow } from '../components/deals/DealTableRow'
 import { PageHeader } from '../components/layout/PageHeader'
@@ -12,23 +12,29 @@ import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
 import type { Deal, DealStage } from '../types'
-import { DEAL_STAGES, formatCurrency } from '../lib/format'
+import { formatCurrency } from '../lib/format'
 import { ImportExportBar } from '../components/ImportExportBar'
-import { PIPE_DEFAULT, USER_SARAH } from '../lib/ids'
+import { RecordDrawer } from '../components/RecordDrawer'
+import { TagPicker } from '../components/TagPicker'
+import { ListFilterBar } from '../components/ListFilterBar'
+import { useListFilters } from '../hooks/useListFilters'
+import { PIPE_DEFAULT } from '../lib/ids'
 
 type DealForm = Omit<Deal, 'id' | 'createdAt'>
 
-const emptyForm: DealForm = {
-  title: '',
-  value: 0,
-  stage: 'lead',
-  pipelineId: PIPE_DEFAULT,
-  contactId: null,
-  companyId: null,
-  ownerId: USER_SARAH,
-  expectedClose: new Date().toISOString().slice(0, 10),
-  tagIds: [],
-  slaDue: null,
+function emptyForm(ownerId: string, pipelineId: string): DealForm {
+  return {
+    title: '',
+    value: 0,
+    stage: 'lead',
+    pipelineId,
+    contactId: null,
+    companyId: null,
+    ownerId,
+    expectedClose: new Date().toISOString().slice(0, 10),
+    tagIds: [],
+    slaDue: null,
+  }
 }
 
 export function DealsPage() {
@@ -36,6 +42,10 @@ export function DealsPage() {
     deals,
     contacts,
     companies,
+    users,
+    pipelineStages,
+    pipelines,
+    currentUser,
     addDeal,
     updateDeal,
     deleteDeal,
@@ -44,11 +54,30 @@ export function DealsPage() {
     getCompany,
   } = useCrm()
   const toast = useToast()
+  const filters = useListFilters('deals')
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState<DealForm>(emptyForm)
+  const ownerId = currentUser?.id ?? users[0]?.id ?? ''
+  const defaultPipelineId = pipelines[0]?.id ?? PIPE_DEFAULT
+  const [form, setForm] = useState<DealForm>(() => emptyForm(ownerId, defaultPipelineId))
   const [view, setView] = useState<'board' | 'table'>('board')
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<DealStage | null>(null)
+  const [drawerDealId, setDrawerDealId] = useState<string | null>(null)
+
+  const boardStages = [...pipelineStages]
+    .sort((a, b) => a.order - b.order)
+    .map((s) => ({ id: s.key as DealStage, label: s.label, color: s.color }))
+
+  const filteredDeals = useMemo(() => {
+    const q = filters.query.toLowerCase()
+    return deals.filter((d) => {
+      const matchQ = !q || d.title.toLowerCase().includes(q)
+      const matchStage = !filters.stage || d.stage === filters.stage
+      return matchQ && matchStage
+    })
+  }, [deals, filters.query, filters.stage])
+
+  const drawerDeal = drawerDealId ? deals.find((d) => d.id === drawerDealId) : undefined
 
   const saveDeal = useCallback(
     (id: string, patch: Partial<Deal>) => {
@@ -79,14 +108,14 @@ export function DealsPage() {
     const dealId = e.dataTransfer.getData('text/deal-id')
     if (dealId) {
       moveDeal(dealId, stage)
-      const label = DEAL_STAGES.find((s) => s.id === stage)?.label
+      const label = boardStages.find((s) => s.id === stage)?.label
       if (label) toast.info(`Moved to ${label}`)
     }
     onDragEnd()
   }
 
   const openCreate = () => {
-    setForm(emptyForm)
+    setForm(emptyForm(ownerId, defaultPipelineId))
     setModalOpen(true)
   }
 
@@ -146,6 +175,22 @@ export function DealsPage() {
         }
       />
 
+      {deals.length > 0 && (
+        <div className="px-8 pt-4">
+          <ListFilterBar
+            query={filters.query}
+            onQueryChange={filters.setQuery}
+            stage={filters.stage}
+            onStageChange={filters.setStage}
+            stageOptions={boardStages.map((s) => ({ value: s.id, label: s.label }))}
+            saved={filters.saved}
+            onSave={filters.saveCurrent}
+            onApply={filters.apply}
+            onRemove={filters.remove}
+          />
+        </div>
+      )}
+
       {deals.length === 0 ? (
         <div className="p-8">
           <EmptyState
@@ -162,8 +207,8 @@ export function DealsPage() {
         </div>
       ) : view === 'board' ? (
         <div className="grid w-full grid-cols-2 gap-2 px-3 pb-4 sm:px-4 md:grid-cols-3 xl:grid-cols-6">
-          {DEAL_STAGES.map((stage) => {
-            const columnDeals = deals.filter((d) => d.stage === stage.id)
+          {boardStages.map((stage) => {
+            const columnDeals = filteredDeals.filter((d) => d.stage === stage.id)
             const columnTotal = columnDeals.reduce((s, d) => s + d.value, 0)
             return (
               <section
@@ -220,6 +265,7 @@ export function DealsPage() {
                               deal={deal}
                               compact
                               onSave={(patch) => saveDeal(deal.id, patch)}
+                              onOpen={() => setDrawerDealId(deal.id)}
                             />
                           </div>
                           <button
@@ -264,7 +310,7 @@ export function DealsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {deals.map((deal) => {
+              {filteredDeals.map((deal) => {
                 const contact = deal.contactId ? getContact(deal.contactId) : undefined
                 return (
                   <DealTableRow
@@ -277,6 +323,7 @@ export function DealsPage() {
                       deal.companyId ? getCompany(deal.companyId)?.name ?? '—' : '—'
                     }
                     onSave={(patch) => saveDeal(deal.id, patch)}
+                    onOpen={() => setDrawerDealId(deal.id)}
                     onDelete={() =>
                       deleteConfirm(toast.askConfirm, deal.title, () => {
                         deleteDeal(deal.id)
@@ -325,7 +372,7 @@ export function DealsPage() {
             label="Stage"
             value={form.stage}
             onChange={(e) => setForm({ ...form, stage: e.target.value as DealStage })}
-            options={DEAL_STAGES.map((s) => ({ value: s.id, label: s.label }))}
+            options={boardStages.map((s) => ({ value: s.id, label: s.label }))}
           />
           <Input
             label="Expected close"
@@ -346,8 +393,27 @@ export function DealsPage() {
             onChange={(e) => setForm({ ...form, companyId: e.target.value || null })}
             options={companyOptions}
           />
+          <Select
+            label="Owner"
+            value={form.ownerId}
+            onChange={(e) => setForm({ ...form, ownerId: e.target.value })}
+            options={users.map((u) => ({ value: u.id, label: u.name }))}
+          />
+          <TagPicker value={form.tagIds} onChange={(tagIds) => setForm({ ...form, tagIds })} />
         </form>
       </Modal>
+
+      {drawerDeal && (
+        <RecordDrawer
+          recordType="deal"
+          recordId={drawerDeal.id}
+          title={drawerDeal.title}
+          emailTo={
+            drawerDeal.contactId ? getContact(drawerDeal.contactId)?.email : undefined
+          }
+          onClose={() => setDrawerDealId(null)}
+        />
+      )}
     </div>
   )
 }
