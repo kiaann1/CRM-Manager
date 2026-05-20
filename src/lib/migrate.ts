@@ -10,7 +10,16 @@ function isLegacyState(raw: any): boolean {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function migrateState(raw: any): CrmState {
   if (!raw || typeof raw !== 'object') return defaultState
-  if (raw.version === 2) return raw as CrmState
+  if (raw.version === 2) {
+    return {
+      ...raw,
+      version: 2,
+      preferences: {
+        ...defaultState.preferences,
+        ...(raw.preferences ?? {}),
+      },
+    } as CrmState
+  }
 
   if (isLegacyState(raw)) {
     const base = structuredClone(defaultState)
@@ -51,5 +60,13 @@ export function migrateState(raw: any): CrmState {
     return base
   }
 
-  return { ...defaultState, ...raw, version: 2 }
+  return {
+    ...defaultState,
+    ...raw,
+    version: 2,
+    preferences: {
+      ...defaultState.preferences,
+      ...(raw.preferences ?? {}),
+    },
+  } as CrmState
 }

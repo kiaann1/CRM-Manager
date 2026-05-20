@@ -11,7 +11,7 @@ import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
 import type { Task, TaskPriority, TaskStatus } from '../types'
-import { formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { USER_SARAH } from '../lib/ids'
 import { PRIORITY_BADGE } from '../lib/theme'
 
@@ -50,6 +50,7 @@ export function TasksPage() {
     setTaskStatus,
     logTime,
   } = useCrm()
+  const { formatDate } = useRegionalFormat()
   const toast = useToast()
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all')
   const [modalOpen, setModalOpen] = useState(false)

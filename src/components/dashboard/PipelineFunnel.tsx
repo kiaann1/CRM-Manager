@@ -1,11 +1,12 @@
 import { useCrm } from '../../context/CrmContext'
-import { formatCurrency } from '../../lib/format'
+import { useRegionalFormat } from '../../lib/useRegionalFormat'
 import { funnelByStage } from '../../lib/pipeline'
 import { badgeClass } from '../../lib/theme'
 import { DashboardPanel } from './DashboardPanel'
 
 export function PipelineFunnel() {
   const crm = useCrm()
+  const { formatCurrency } = useRegionalFormat()
   const funnel = funnelByStage(crm).filter((s) => s.stage !== 'lost')
   const maxValue = Math.max(...funnel.map((f) => f.value), 1)
   const totalValue = funnel.reduce((s, f) => s + f.value, 0)

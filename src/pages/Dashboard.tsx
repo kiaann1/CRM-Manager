@@ -21,7 +21,8 @@ import { RecordDrawer } from '../components/RecordDrawer'
 import { StatCard } from '../components/StatCard'
 import { useCrm } from '../context/CrmContext'
 import { getNextBestActions } from '../lib/ai'
-import { formatCurrency, fullName } from '../lib/format'
+import { fullName } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { dealVelocityDays, weightedPipelineValue } from '../lib/pipeline'
 import { USER_SARAH } from '../lib/ids'
 import { badgeClass } from '../lib/theme'
@@ -37,6 +38,7 @@ function stageBadgeClass(crm: ReturnType<typeof useCrm>, stage: string) {
 
 export function Dashboard() {
   const crm = useCrm()
+  const { formatCurrency } = useRegionalFormat()
   const { contacts, companies, deals, tasks, leads, session, pipelineStages, getContact, getCompany } =
     crm
   const [drawerDealId, setDrawerDealId] = useState<string | null>(null)

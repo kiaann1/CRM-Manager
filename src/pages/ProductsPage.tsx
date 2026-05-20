@@ -11,7 +11,7 @@ import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
 import { api } from '../lib/api/client'
-import { formatCurrency } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import type { Product, ProductSpecification } from '../types'
 
 type ProductDraft = Omit<Product, 'id' | 'createdAt' | 'updatedAt'>
@@ -50,6 +50,7 @@ function draftFromProduct(p: Product): ProductDraft {
 
 export function ProductsPage() {
   const { products, addProduct, updateProduct, deleteProduct, productCatalogToken, refreshWorkspace } = useCrm()
+  const { formatCurrency } = useRegionalFormat()
   const toast = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)

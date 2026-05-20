@@ -8,7 +8,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
-import { formatCurrency } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import type { Campaign } from '../types'
 
 type CampaignForm = Omit<Campaign, 'id'>
@@ -23,6 +23,7 @@ const emptyCampaign: CampaignForm = {
 export function MarketingPage() {
   const { forms, campaigns, leads, emailSequences, addCampaign, updateCampaign, deleteCampaign } =
     useCrm()
+  const { formatCurrency } = useRegionalFormat()
   const toast = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Campaign | null>(null)

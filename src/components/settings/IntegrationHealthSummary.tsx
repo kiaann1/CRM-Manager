@@ -1,7 +1,7 @@
 import { CheckCircle2, Circle, XCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { Integration } from '../../types'
-import { formatDate } from '../../lib/format'
+import { useRegionalFormat } from '../../lib/useRegionalFormat'
 
 function statusIcon(integration: Integration) {
   if (!integration.enabled) {
@@ -25,6 +25,7 @@ function statusLabel(integration: Integration) {
 }
 
 export function IntegrationHealthSummary({ integrations }: { integrations: Integration[] }) {
+  const { formatDate } = useRegionalFormat()
   if (integrations.length === 0) {
     return <p className="text-sm text-text-muted">No integrations loaded.</p>
   }

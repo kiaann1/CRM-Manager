@@ -4,7 +4,14 @@ import { PIPE_DEFAULT, TEAM_CS, TEAM_SALES, TERRITORY_WEST, USER_ADMIN, USER_MAR
 export const defaultState: CrmState = {
   version: 2,
   session: null,
-  preferences: { theme: 'light', emailDigest: true, pushEnabled: true },
+  preferences: {
+    theme: 'light',
+    emailDigest: true,
+    pushEnabled: true,
+    currency: 'USD',
+    locale: 'en-US',
+    timezone: 'UTC',
+  },
   productCatalogToken: null,
   users: [
     { id: USER_SARAH, name: 'Sarah Chen', email: 'sarah@crm.local', role: 'rep', teamId: TEAM_SALES, territoryId: TERRITORY_WEST },

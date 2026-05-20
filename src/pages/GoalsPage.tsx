@@ -4,7 +4,7 @@ import { PageFrame } from '../components/layout/PageFrame'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
-import { formatCurrency } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Input } from '../components/ui/Input'
@@ -53,6 +53,7 @@ export function GoalsPage() {
     addSprint,
     currentUser,
   } = useCrm()
+  const { formatCurrency } = useRegionalFormat()
   const toast = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [sprintModalOpen, setSprintModalOpen] = useState(false)

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { PageFrame } from '../components/layout/PageFrame'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
-import { formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
@@ -14,6 +14,7 @@ import type { TicketStatus } from '../types'
 export function SupportPage() {
   const { tickets, companies, surveys, updateTicket, addTicket, addSurvey, getCompany, currentUser, users } =
     useCrm()
+  const { formatDate } = useRegionalFormat()
   const toast = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [npsCompanyId, setNpsCompanyId] = useState('')

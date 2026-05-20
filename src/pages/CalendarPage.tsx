@@ -4,7 +4,7 @@ import { PageFrame } from '../components/layout/PageFrame'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
-import { formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Input } from '../components/ui/Input'
@@ -47,6 +47,7 @@ export function CalendarPage() {
     companies,
     currentUser,
   } = useCrm()
+  const { formatDate } = useRegionalFormat()
   const toast = useToast()
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<CalendarEvent | null>(null)

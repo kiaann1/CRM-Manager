@@ -13,7 +13,7 @@ import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
 import type { Deal, DealStage } from '../types'
-import { formatCurrency } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { ImportExportBar } from '../components/ImportExportBar'
 import { RecordDrawer } from '../components/RecordDrawer'
 import { TagPicker } from '../components/TagPicker'
@@ -54,7 +54,9 @@ export function DealsPage() {
     moveDeal,
     getContact,
     getCompany,
+    preferences,
   } = useCrm()
+  const { formatCurrency } = useRegionalFormat()
   const toast = useToast()
   const filters = useListFilters('deals')
   const [modalOpen, setModalOpen] = useState(false)
@@ -344,7 +346,7 @@ export function DealsPage() {
             onChange={(e) => setForm({ ...form, title: e.target.value })}
           />
           <Input
-            label="Value (USD)"
+            label={`Value (${preferences.currency})`}
             type="number"
             min={0}
             required

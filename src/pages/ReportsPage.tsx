@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { PageFrame } from '../components/layout/PageFrame'
 import { StatCard } from '../components/StatCard'
 import { useCrm } from '../context/CrmContext'
-import { formatCurrency } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { downloadCsv, toCsv } from '../lib/csv'
 import { BarChart3, Download, TrendingUp } from 'lucide-react'
 import { Button } from '../components/ui/Button'
@@ -11,6 +11,7 @@ import { USER_SARAH } from '../lib/ids'
 
 export function ReportsPage() {
   const crm = useCrm()
+  const { formatCurrency } = useRegionalFormat()
   const userId = crm.session?.userId ?? USER_SARAH
 
   const funnel = useMemo(() => {

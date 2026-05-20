@@ -200,6 +200,9 @@ export async function buildBootstrap(orgId: string, userId: string) {
       theme: normalizeTheme(prefs?.theme ?? 'light'),
       emailDigest: prefs?.emailDigest ?? true,
       pushEnabled: prefs?.pushEnabled ?? true,
+      currency: prefs?.currency ?? 'USD',
+      locale: prefs?.locale ?? 'en-US',
+      timezone: prefs?.timezone ?? 'UTC',
     },
     productCatalogToken: membership.organization.productCatalogToken ?? null,
     users: members.map((m) => ({

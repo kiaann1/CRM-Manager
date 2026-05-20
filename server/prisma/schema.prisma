@@ -130,6 +130,12 @@ model UserPreference {
   theme        String  @default("light")
   emailDigest  Boolean @default(true)
   pushEnabled  Boolean @default(true)
+  /// ISO 4217 (e.g. USD, EUR).
+  currency     String  @default("USD")
+  /// BCP 47 locale for dates and numbers (e.g. en-GB).
+  locale       String  @default("en-US")
+  /// IANA time zone for displaying dates (e.g. Europe/London).
+  timezone     String  @default("UTC")
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 

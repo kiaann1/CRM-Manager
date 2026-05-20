@@ -1,5 +1,7 @@
 ﻿import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react'
+import { useEffect } from 'react'
 import { useToast } from '../../context/ToastContext'
+import { lockDocumentScroll } from '../../lib/scrollLock'
 import { Button } from './Button'
 
 const variantStyles = {
@@ -19,10 +21,15 @@ const icons = {
 export function Toaster() {
   const { toasts, dismiss, confirm, resolveConfirm } = useToast()
 
+  useEffect(() => {
+    if (!confirm) return
+    return lockDocumentScroll()
+  }, [confirm])
+
   return (
     <>
       <div
-        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex max-w-sm flex-col gap-2"
+        className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-[100] flex flex-col items-stretch gap-2 sm:left-auto sm:right-4 sm:max-w-sm sm:items-end"
         aria-live="polite"
       >
         {toasts.map((toast) => {
@@ -50,7 +57,7 @@ export function Toaster() {
 
       {confirm && (
         <div
-          className="fixed inset-0 z-[110] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[110] flex min-h-0 items-end justify-center overflow-hidden overscroll-none px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:items-center sm:p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="confirm-title"
@@ -60,14 +67,16 @@ export function Toaster() {
             onClick={() => resolveConfirm(false)}
             aria-hidden
           />
-          <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl">
-            <h2 id="confirm-title" className="text-lg font-semibold text-text">
-              {confirm.title}
-            </h2>
-            {confirm.message && (
-              <p className="mt-2 text-sm text-text-muted">{confirm.message}</p>
-            )}
-            <div className="mt-6 flex justify-end gap-2">
+          <div className="relative mt-auto flex min-h-0 max-h-[min(92dvh,calc(100dvh-1rem))] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border border-border bg-surface shadow-xl sm:mt-0 sm:rounded-2xl">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:p-6">
+              <h2 id="confirm-title" className="text-lg font-semibold text-text">
+                {confirm.title}
+              </h2>
+              {confirm.message && (
+                <p className="mt-2 text-sm text-text-muted">{confirm.message}</p>
+              )}
+            </div>
+            <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border px-4 py-3 sm:px-6 sm:py-4">
               <Button variant="secondary" onClick={() => resolveConfirm(false)}>
                 {confirm.cancelLabel ?? 'Cancel'}
               </Button>

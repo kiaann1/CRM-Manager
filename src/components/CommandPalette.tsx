@@ -5,6 +5,7 @@ import { useCommandPalette } from '../context/CommandPaletteContext'
 import { useCrm } from '../context/CrmContext'
 import { api } from '../lib/api/client'
 import { fullName } from '../lib/format'
+import { lockDocumentScroll } from '../lib/scrollLock'
 
 const pages = [
   { label: 'Dashboard', path: '/' },
@@ -145,6 +146,11 @@ export function CommandPalette() {
     }
   }, [q, crm, remote])
 
+  useEffect(() => {
+    if (!open) return
+    return lockDocumentScroll()
+  }, [open])
+
   if (!open) return null
 
   const go = (path: string) => {
@@ -164,31 +170,31 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/60 p-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:p-4 sm:pt-[10vh]"
+      className="fixed inset-0 z-[100] flex min-h-0 items-start justify-center overflow-hidden overscroll-none bg-slate-900/60 p-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:p-4 sm:pt-[10vh]"
       onClick={() => setOpen(false)}
       role="presentation"
     >
       <div
-        className="glass-panel mx-auto w-full max-w-xl overflow-hidden rounded-2xl shadow-2xl shadow-slate-900/20 ring-1 ring-white/10"
+        className="glass-panel mx-auto mb-2 flex min-h-0 max-h-[min(85dvh,calc(100svh-2rem))] w-full max-w-xl flex-col overflow-hidden rounded-2xl shadow-2xl shadow-slate-900/20 ring-1 ring-white/10 sm:mb-0"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Search"
       >
-        <div className="flex items-center gap-2 border-b border-border/80 px-4">
+        <div className="flex shrink-0 items-center gap-2 border-b border-border/80 px-3 sm:px-4">
           <Search size={18} className="shrink-0 text-brand-600" />
           <input
             autoFocus
             placeholder="Search contacts, deals, pages…"
-            className="form-control flex-1 border-0 bg-transparent py-4 shadow-none focus:ring-0"
+            className="form-control min-w-0 flex-1 border-0 bg-transparent py-3 shadow-none focus:ring-0 sm:py-4"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          {searching && <Loader2 size={16} className="animate-spin text-text-muted" />}
-          <kbd className="hidden rounded-md border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] text-text-muted sm:inline">
+          {searching && <Loader2 size={16} className="shrink-0 animate-spin text-text-muted" />}
+          <kbd className="hidden shrink-0 rounded-md border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] text-text-muted sm:inline">
             esc
           </kbd>
         </div>
-        <div className="max-h-[min(26rem,55vh)] overflow-y-auto p-2">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
           {results.nav.length > 0 && (
             <Section title="Pages">
               {results.nav.map((p) => (
@@ -262,7 +268,7 @@ export function CommandPalette() {
             </p>
           )}
         </div>
-        <div className="border-t border-border/80 px-4 py-2 text-center text-[10px] text-text-muted">
+        <div className="shrink-0 border-t border-border/80 px-3 py-2 text-center text-[10px] text-text-muted sm:px-4">
           Server search when you type 2+ characters
         </div>
       </div>

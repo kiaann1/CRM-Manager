@@ -8,13 +8,15 @@ import {
   StickyNote,
   X,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import type { ActivityType, RecordType } from '../types'
-import { formatDate, fullName } from '../lib/format'
+import { fullName } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { summarizeRecord } from '../lib/ai'
+import { lockDocumentScroll } from '../lib/scrollLock'
 import { CustomFieldsBlock } from './CustomFieldsBlock'
 import { DealApprovalsPanel } from './DealApprovalsPanel'
 import { DealContractsPanel } from './DealContractsPanel'
@@ -50,13 +52,17 @@ export function RecordDrawer({
   onClose,
 }: RecordDrawerProps) {
   const crm = useCrm()
+  const { formatDate } = useRegionalFormat()
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('timeline')
   const [comment, setComment] = useState('')
   const [emailSubject, setEmailSubject] = useState('')
   const [emailBody, setEmailBody] = useState('')
   const [logSubject, setLogSubject] = useState('')
-  const [logBody, setLogBody] = useState('')
+  const [logDetails, setLogDetails] = useState('')
+  const [logMeetingLength, setLogMeetingLength] = useState('')
+  const [logActionsText, setLogActionsText] = useState('')
+  const [logAttachedNames, setLogAttachedNames] = useState<string[]>([])
   const [logType, setLogType] = useState<ActivityType>('note')
 
   const activities = crm.getActivities(recordType, recordId)
@@ -94,6 +100,10 @@ export function RecordDrawer({
 
   const aiSummary = summarizeRecord(recordType, title, activities.length, openTasks)
 
+  useEffect(() => {
+    return lockDocumentScroll()
+  }, [])
+
   const logActivity = (type: ActivityType, subject: string, body = '') => {
     if (!crm.currentUser) return
     crm.addActivity({
@@ -107,17 +117,71 @@ export function RecordDrawer({
     toast.success(`${subject} logged`)
   }
 
-  const quickLog = (type: ActivityType) => {
-    const defaults: Record<ActivityType, string> = {
-      call: 'Call',
-      email: 'Email',
-      meeting: 'Meeting',
-      note: 'Note',
-    }
-    logActivity(type, logSubject.trim() || defaults[type], logBody)
-    setLogSubject('')
-    setLogBody('')
+  const activityDefaults: Record<ActivityType, string> = {
+    call: 'Call',
+    email: 'Email',
+    meeting: 'Meeting',
+    note: 'Note',
   }
+
+  const submitLog = () => {
+    if (!crm.currentUser) return
+    const subject = logSubject.trim() || activityDefaults[logType]
+    const parts: string[] = []
+    if (logType === 'meeting' && logMeetingLength.trim()) {
+      parts.push(`Length: ${logMeetingLength.trim()}`)
+    }
+    const detail = logDetails.trim()
+    if (detail) {
+      parts.push(logType === 'meeting' ? `Notes:\n${detail}` : `Message:\n${detail}`)
+    }
+    if (logAttachedNames.length > 0) {
+      parts.push(`Attachments: ${logAttachedNames.join(', ')}`)
+    }
+    if (logActionsText.trim()) {
+      parts.push(`Actions:\n${logActionsText.trim()}`)
+    }
+    logActivity(logType, subject, parts.join('\n\n'))
+    setLogSubject('')
+    setLogDetails('')
+    setLogMeetingLength('')
+    setLogActionsText('')
+    setLogAttachedNames([])
+  }
+
+  const handleLogFile = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('File must be under 2 MB')
+        e.target.value = ''
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        crm.uploadFile({
+          recordType,
+          recordId,
+          name: file.name,
+          size: file.size,
+          mimeType: file.type || 'application/octet-stream',
+          storageKey: typeof reader.result === 'string' ? reader.result : undefined,
+        })
+        setLogAttachedNames((prev) => [...prev, file.name])
+        toast.success(`${file.name} attached to this record`)
+      }
+      reader.readAsDataURL(file)
+      e.target.value = ''
+    },
+    [crm, recordType, recordId, toast],
+  )
+
+  const activityTypeHeading = (type: string) =>
+    type.length ? type.charAt(0).toUpperCase() + type.slice(1) : type
+
+  const logSubmitLabel =
+    logType === 'call' ? 'Log call' : logType === 'meeting' ? 'Log meeting' : 'Log note'
 
   const submitComment = () => {
     if (!comment.trim() || !crm.currentUser) return
@@ -177,9 +241,9 @@ export function RecordDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex min-h-0 justify-end">
       <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} aria-hidden />
-      <aside className="relative flex h-full w-full max-w-3xl flex-col bg-surface shadow-2xl dark:bg-slate-900">
+      <aside className="relative flex h-full max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden bg-surface shadow-2xl sm:max-w-3xl dark:bg-slate-900">
         <header className="flex items-start justify-between border-b border-border px-5 py-4 dark:border-slate-700">
           <div>
             <p className="text-xs uppercase text-text-muted">{recordType}</p>
@@ -228,43 +292,90 @@ export function RecordDrawer({
             <div className="space-y-4">
               <section className="list-item p-3">
                 <p className="mb-2 text-xs font-semibold uppercase text-text-muted">Log activity</p>
-                <div className="mb-2 flex flex-wrap gap-1">
+                <p className="mb-2 text-xs text-text-muted">
+                  Choose a type, fill in the form, then log — switching type does not submit.
+                </p>
+                <div className="mb-3 flex flex-wrap gap-1">
                   {(
                     [
-                      ['call', Phone],
-                      ['meeting', Calendar],
-                      ['note', StickyNote],
+                      ['call', Phone, 'Call'],
+                      ['meeting', Calendar, 'Meeting'],
+                      ['note', StickyNote, 'Note'],
                     ] as const
-                  ).map(([type, Icon]) => (
+                  ).map(([type, Icon, label]) => (
                     <Button
                       key={type}
-                      variant="secondary"
+                      variant={logType === type ? 'primary' : 'secondary'}
                       className="px-2 py-1 text-xs"
-                      onClick={() => {
-                        setLogType(type)
-                        quickLog(type)
-                      }}
+                      onClick={() => setLogType(type)}
                     >
                       <Icon size={14} />
-                      {type}
+                      {label}
                     </Button>
                   ))}
                 </div>
                 <Input
-                  label="Subject"
+                  label={
+                    logType === 'meeting'
+                      ? 'Meeting subject'
+                      : logType === 'call'
+                        ? 'Call subject'
+                        : 'Subject'
+                  }
                   value={logSubject}
                   onChange={(e) => setLogSubject(e.target.value)}
-                  placeholder="e.g. Discovery call"
+                  placeholder={
+                    logType === 'meeting'
+                      ? 'e.g. Q1 planning sync'
+                      : logType === 'call'
+                        ? 'e.g. Discovery call'
+                        : 'e.g. Internal update'
+                  }
                 />
+                {logType === 'meeting' && (
+                  <Input
+                    label="Length"
+                    className="mt-2"
+                    value={logMeetingLength}
+                    onChange={(e) => setLogMeetingLength(e.target.value)}
+                    placeholder="e.g. 30 minutes, 1 hour"
+                  />
+                )}
                 <Textarea
-                  label="Notes"
+                  label={logType === 'meeting' ? 'Notes' : 'Message'}
+                  className="mt-2"
+                  rows={logType === 'meeting' ? 3 : 4}
+                  value={logDetails}
+                  onChange={(e) => setLogDetails(e.target.value)}
+                  placeholder={
+                    logType === 'meeting'
+                      ? 'Agenda, outcomes, decisions…'
+                      : 'What was discussed or decided…'
+                  }
+                />
+                <div className="mt-2">
+                  <p className="mb-1 text-xs font-medium text-text">File upload</p>
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-sm hover:bg-surface-muted dark:border-slate-600">
+                    <Paperclip size={14} />
+                    <span>Choose file (max 2 MB) — attaches to this record</span>
+                    <input type="file" className="sr-only" onChange={handleLogFile} />
+                  </label>
+                  {logAttachedNames.length > 0 && (
+                    <p className="mt-1 text-xs text-text-muted">
+                      Files queued for activity summary: {logAttachedNames.join(', ')}
+                    </p>
+                  )}
+                </div>
+                <Textarea
+                  label="Actions"
                   className="mt-2"
                   rows={2}
-                  value={logBody}
-                  onChange={(e) => setLogBody(e.target.value)}
+                  value={logActionsText}
+                  onChange={(e) => setLogActionsText(e.target.value)}
+                  placeholder="Follow-ups, owners, links, next steps…"
                 />
-                <Button className="mt-2" onClick={() => quickLog(logType)}>
-                  Log {logType}
+                <Button className="mt-3" onClick={submitLog}>
+                  {logSubmitLabel}
                 </Button>
               </section>
               <ul className="space-y-3">
@@ -276,9 +387,13 @@ export function RecordDrawer({
                       key={a.id}
                       className="list-item p-3"
                     >
-                      <p className="text-xs font-medium uppercase text-text-muted">{a.type}</p>
+                      <p className="text-xs font-medium uppercase text-text-muted">
+                        {activityTypeHeading(a.type)}
+                      </p>
                       <p className="font-medium">{a.subject}</p>
-                      {a.body && <p className="text-sm text-text-muted">{a.body}</p>}
+                      {a.body && (
+                        <p className="whitespace-pre-wrap text-sm text-text-muted">{a.body}</p>
+                      )}
                       <p className="mt-1 text-xs text-text-muted">
                         {crm.getUser(a.userId)?.name} · {formatDate(a.at)}
                       </p>

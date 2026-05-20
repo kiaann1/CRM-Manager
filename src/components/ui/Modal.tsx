@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
+import { lockDocumentScroll } from '../../lib/scrollLock'
 import { Button } from './Button'
 
 interface ModalProps {
@@ -15,14 +16,14 @@ interface ModalProps {
 export function Modal({ open, onClose, title, children, footer, panelClassName = '' }: ModalProps) {
   useEffect(() => {
     if (!open) return
+    const releaseScroll = lockDocumentScroll()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
+      releaseScroll()
     }
   }, [open, onClose])
 
@@ -30,7 +31,7 @@ export function Modal({ open, onClose, title, children, footer, panelClassName =
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex min-h-0 items-end justify-center overflow-hidden overscroll-none px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:items-center sm:px-4 sm:py-4"
       role="dialog"
       aria-modal="true"
     >
@@ -39,16 +40,20 @@ export function Modal({ open, onClose, title, children, footer, panelClassName =
         onClick={onClose}
         aria-hidden
       />
-      <div className={`relative w-full max-w-lg rounded-2xl bg-surface shadow-xl ${panelClassName}`.trim()}>
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-lg font-semibold text-text">{title}</h2>
-          <Button variant="ghost" className="!p-2" onClick={onClose} aria-label="Close">
+      <div
+        className={`relative flex min-h-0 max-h-[min(92dvh,calc(100dvh-1rem))] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl ${panelClassName}`.trim()}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
+          <h2 className="min-w-0 flex-1 text-lg font-semibold text-text">{title}</h2>
+          <Button variant="ghost" className="!p-2 shrink-0" onClick={onClose} aria-label="Close">
             <X size={18} />
           </Button>
         </div>
-        <div className="px-6 py-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-6 sm:py-4">
+          {children}
+        </div>
         {footer && (
-          <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+          <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border px-4 py-3 sm:px-6 sm:py-4">
             {footer}
           </div>
         )}

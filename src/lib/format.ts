@@ -1,17 +1,51 @@
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value)
+import type { UserPreferences } from '../types'
+
+export type RegionalFormatPrefs = Pick<UserPreferences, 'currency' | 'locale' | 'timezone'>
+
+const DEFAULT_REGIONAL: RegionalFormatPrefs = {
+  currency: 'USD',
+  locale: 'en-US',
+  timezone: 'UTC',
 }
 
-export function formatDate(date: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(date + (date.includes('T') ? '' : 'T12:00:00')))
+function mergeRegional(prefs?: Partial<RegionalFormatPrefs>): RegionalFormatPrefs {
+  return { ...DEFAULT_REGIONAL, ...prefs }
+}
+
+export function formatCurrency(value: number, prefs?: Partial<RegionalFormatPrefs>): string {
+  const p = mergeRegional(prefs)
+  try {
+    return new Intl.NumberFormat(p.locale, {
+      style: 'currency',
+      currency: p.currency,
+      maximumFractionDigits: 0,
+    }).format(value)
+  } catch {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+}
+
+export function formatDate(date: string, prefs?: Partial<RegionalFormatPrefs>): string {
+  const p = mergeRegional(prefs)
+  const d = new Date(date.includes('T') ? date : `${date}T12:00:00`)
+  try {
+    return new Intl.DateTimeFormat(p.locale, {
+      timeZone: p.timezone,
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(d)
+  } catch {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(d)
+  }
 }
 
 export function fullName(first: string, last: string): string {

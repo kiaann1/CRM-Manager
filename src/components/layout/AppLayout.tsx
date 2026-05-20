@@ -84,20 +84,18 @@ export function AppLayout() {
 
   return (
     <CommandPaletteProvider>
-      <div className="app-mesh flex min-h-dvh w-full min-w-0">
+      <div className="app-mesh flex h-dvh max-h-dvh min-h-0 w-full min-w-0 overflow-hidden">
         <Sidebar
           id="app-sidebar"
           mobileOpen={mobileNavOpen}
           onCloseMobile={() => setMobileNavOpen(false)}
         />
-        <div
-          className={`flex min-h-0 min-w-0 flex-1 flex-col ${mobileNavOpen ? 'max-lg:overflow-hidden' : ''}`}
-        >
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <AppHeader
             mobileNavOpen={mobileNavOpen}
             onToggleMobileNav={() => setMobileNavOpen((o) => !o)}
           />
-          <main className="page-content min-w-0 flex-1 overflow-x-hidden">
+          <main className="page-content min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
             <Outlet />
           </main>
         </div>

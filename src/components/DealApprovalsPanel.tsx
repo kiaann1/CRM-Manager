@@ -2,12 +2,13 @@ import { Check, X } from 'lucide-react'
 import { useState } from 'react'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
-import { formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Select } from './ui/Select'
 
 export function DealApprovalsPanel({ dealId }: { dealId: string }) {
+  const { formatDate } = useRegionalFormat()
   const { approvals, users, currentUser, requestApproval, respondApproval, getUser } = useCrm()
   const toast = useToast()
   const dealApprovals = approvals.filter((a) => a.dealId === dealId)

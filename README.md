@@ -80,6 +80,32 @@ Invite links use `FRONTEND_URL` in `server/.env` (default `http://localhost:5173
 npm run db:setup:neon   # or npm run db:push --prefix server && npx prisma generate --prefix server
 ```
 
+### Workspace failed to load (Prisma / missing column)
+
+If sign-in works but you see **“Signed in but workspace failed to load”** and the server log mentions **`column … does not exist`** on `bootstrap` / `membership.findUnique`, your **Postgres schema is behind** the Prisma schema in this repo.
+
+1. **Recommended:** push schema and regenerate the client:
+
+   - From the **repo root** (`CRM-Manager/`): `npm run db:push --prefix server`
+   - If you are **already in** `server/`, run **`npm run db:push` only** — do not add `--prefix server` (npm would look for `server/server/package.json` and fail with `ENOENT`).
+
+2. **Or** open `server/prisma/fix-bootstrap-columns.sql` in the Neon (or psql) SQL editor and run it, then restart the API.
+
+After that, sign in again.
+
+### Prisma `P1001` — “Can’t reach database server”
+
+`prisma db push` uses **TCP to port 5432**. If you see **P1001** for your Neon host, the client never established a connection (this is not a “wrong password” error).
+
+Try, in order:
+
+1. **Neon project awake** — In the [Neon console](https://console.neon.tech), open the project and branch. A suspended compute wakes on dashboard use; copy a **fresh** `DATABASE_URL` into `server/.env` if the project was recreated or rotated.
+2. **Network** — Corporate or school Wi‑Fi often blocks outbound **5432**. Try another network (e.g. phone hotspot) or VPN off/on.
+3. **Connection string** — Prefer Neon’s **direct** (non-pooled) URL for local Prisma when troubleshooting; ensure the URL includes SSL (e.g. `?sslmode=require`) if Neon’s copy button didn’t add it.
+4. **No TCP at all** — You can still fix **missing bootstrap columns** by running `server/prisma/fix-bootstrap-columns.sql` in Neon’s **SQL editor** (HTTPS in the browser), then restart the API.
+
+**Avoid** `npm run db:push:neon` / `db:setup:neon` on a database you care about: the Neon HTTP helper script **drops and recreates `public` by default** (fresh schema only). Use normal `db:push` over TCP once connectivity works.
+
 ### SSO (optional)
 
 Set credentials in `server/.env`:
@@ -206,7 +232,8 @@ How each screen works today: what you can click, what hits the API, and what is 
 | **List filters** | Contacts, leads, companies, deals | Search + stage/score filters; **saved views** in `localStorage` only (not server). |
 | **Import / export** | Contacts, leads, deals toolbar | CSV export from loaded data; import API for contacts & leads only (`POST …/import`). Deals: export only. |
 | **Notifications** | Header bell | In-app notifications from bootstrap; mark one/all read; digest toggles in Settings. |
-| **Theme** | Header toggle + Settings → Profile | Light / dark / system via preferences API. |
+| **Theme** | Header toggle + Settings → Profile | Light / dark via preferences API. |
+| **Regional** | Settings → Profile | Currency (ISO 4217), locale (BCP 47), and IANA time zone for amounts and dates across the app. |
 | **Tags** | Contact / lead / deal modals | `TagPicker` — org tags from Settings → Workspace. |
 | **Header search** | Click search in app bar | Opens command palette (same as ⌘K). |
 
@@ -563,7 +590,7 @@ All `/api/v1/*` routes require a session cookie **or** API key (`Authorization: 
 |--------|------|--------|
 | `GET` | `/api/v1/bootstrap` | Full workspace snapshot (`CrmState` shape); runs integrations + starter content hooks |
 | `GET` | `/api/v1/search?q=` | Global search (2+ chars): contacts, companies, deals, leads, documents |
-| `PATCH` | `/api/v1/preferences` | Theme, email digest, push toggles |
+| `PATCH` | `/api/v1/preferences` | Theme, email digest, push toggles, `currency`, `locale`, `timezone` |
 | `GET` | `/api/v1/openapi` | Stub OpenAPI JSON |
 | `POST` | `/api/v1/product-catalog-feed` | Create or **rotate** storefront catalog secret; response `{ token, url }` (absolute `API_URL`) |
 | `DELETE` | `/api/v1/product-catalog-feed` | Revoke catalog token |
@@ -750,7 +777,7 @@ Schema source: `server/prisma/schema.prisma`.
 | Field | Contents |
 |-------|----------|
 | `session` | `userId`, `email`, `loggedInAt` (null if logged out) |
-| `preferences` | `theme`, `emailDigest`, `pushEnabled` |
+| `preferences` | `theme`, `emailDigest`, `pushEnabled`, `currency`, `locale`, `timezone` |
 | `users`, `teams`, `territories`, `workspaces` | Org directory |
 | `tags` | Label + color |
 | `companies`, `contacts`, `leads` | CRM records |

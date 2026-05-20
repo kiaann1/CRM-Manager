@@ -2,7 +2,7 @@ import { FileSignature, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
-import { formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import type { ContractStatus } from '../types'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
@@ -16,6 +16,7 @@ const statuses = [
 ]
 
 export function DealContractsPanel({ dealId }: { dealId: string }) {
+  const { formatDate } = useRegionalFormat()
   const { contracts, addContract, updateContract } = useCrm()
   const toast = useToast()
   const dealContracts = contracts.filter((c) => c.dealId === dealId)

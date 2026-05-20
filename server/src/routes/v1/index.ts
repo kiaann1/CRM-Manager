@@ -15,6 +15,11 @@ import { integrationsRouter } from '../integrations.js'
 import { invitesRouter } from '../invites.js'
 import { crmExtrasRouter } from '../crmExtras.js'
 import { searchRouter } from '../search.js'
+import {
+  preferencesCurrencySchema,
+  preferencesLocaleSchema,
+  preferencesTimezoneSchema,
+} from '../../lib/regionalPrefs.js'
 
 export const v1Router = Router()
 v1Router.use(requireAuth)
@@ -929,6 +934,9 @@ v1Router.patch('/preferences', async (req: AuthRequest, res) => {
         .transform((t) => (t === undefined ? undefined : t === 'dark' ? 'dark' : 'light')),
       emailDigest: z.boolean().optional(),
       pushEnabled: z.boolean().optional(),
+      currency: preferencesCurrencySchema.optional(),
+      locale: preferencesLocaleSchema.optional(),
+      timezone: preferencesTimezoneSchema.optional(),
     })
     .parse(req.body)
   const prefs = await prisma.userPreference.upsert({

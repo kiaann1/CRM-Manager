@@ -5,7 +5,8 @@ import { PageFrame } from '../components/layout/PageFrame'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { api } from '../lib/api/client'
-import { formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
+import { CURRENCY_OPTIONS, LOCALE_OPTIONS, TIMEZONE_OPTIONS } from '../lib/regionalOptions'
 import { isNewPasswordValid } from '../lib/passwordPolicy'
 import { Button } from '../components/ui/Button'
 import { Select } from '../components/ui/Select'
@@ -45,6 +46,7 @@ const WEBHOOK_EVENTS = [
 
 export function SettingsPage() {
   const crm = useCrm()
+  const { formatDate } = useRegionalFormat()
   const toast = useToast()
   const [searchParams] = useSearchParams()
   const tabFromUrl = searchParams.get('tab')
@@ -93,6 +95,24 @@ export function SettingsPage() {
         : (['rep', 'guest', 'readonly'] as const)
     return roles.map((r) => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))
   }, [crm.currentUser?.role])
+
+  const currencySelectOptions = useMemo(() => {
+    const c = crm.preferences.currency
+    if (CURRENCY_OPTIONS.some((o) => o.value === c)) return CURRENCY_OPTIONS
+    return [{ value: c, label: `${c} (current)` }, ...CURRENCY_OPTIONS]
+  }, [crm.preferences.currency])
+
+  const localeSelectOptions = useMemo(() => {
+    const l = crm.preferences.locale
+    if (LOCALE_OPTIONS.some((o) => o.value === l)) return LOCALE_OPTIONS
+    return [{ value: l, label: `${l} (current)` }, ...LOCALE_OPTIONS]
+  }, [crm.preferences.locale])
+
+  const timezoneSelectOptions = useMemo(() => {
+    const tz = crm.preferences.timezone
+    if (TIMEZONE_OPTIONS.some((o) => o.value === tz)) return TIMEZONE_OPTIONS
+    return [{ value: tz, label: `${tz} (current)` }, ...TIMEZONE_OPTIONS]
+  }, [crm.preferences.timezone])
 
   useEffect(() => {
     setWebhooks(crm.webhooks)
@@ -194,6 +214,52 @@ export function SettingsPage() {
                     { value: 'light', label: 'Light' },
                     { value: 'dark', label: 'Dark' },
                   ]}
+                />
+              </section>
+              <section className="space-y-4 border-t border-border pt-6">
+                <h3 className="text-sm font-semibold text-text">Regional</h3>
+                <p className="text-xs text-text-muted">
+                  Currency is used for pipeline, deals, products, and reports. Locale and time zone
+                  control how dates and numbers are shown.
+                </p>
+                <Select
+                  label="Currency"
+                  className="max-w-md"
+                  value={crm.preferences.currency}
+                  onChange={async (e) => {
+                    try {
+                      await crm.setPreferences({ currency: e.target.value })
+                    } catch (err: unknown) {
+                      toast.error(err instanceof Error ? err.message : 'Could not save currency')
+                    }
+                  }}
+                  options={currencySelectOptions}
+                />
+                <Select
+                  label="Locale"
+                  className="max-w-md"
+                  value={crm.preferences.locale}
+                  onChange={async (e) => {
+                    try {
+                      await crm.setPreferences({ locale: e.target.value })
+                    } catch (err: unknown) {
+                      toast.error(err instanceof Error ? err.message : 'Could not save locale')
+                    }
+                  }}
+                  options={localeSelectOptions}
+                />
+                <Select
+                  label="Time zone"
+                  className="max-w-md"
+                  value={crm.preferences.timezone}
+                  onChange={async (e) => {
+                    try {
+                      await crm.setPreferences({ timezone: e.target.value })
+                    } catch (err: unknown) {
+                      toast.error(err instanceof Error ? err.message : 'Could not save time zone')
+                    }
+                  }}
+                  options={timezoneSelectOptions}
                 />
               </section>
               {hasPassword && (

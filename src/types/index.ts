@@ -511,6 +511,12 @@ export interface UserPreferences {
   theme: ThemeMode
   emailDigest: boolean
   pushEnabled: boolean
+  /** ISO 4217 currency code (e.g. USD, EUR). */
+  currency: string
+  /** BCP 47 locale for dates and numbers (e.g. en-GB). */
+  locale: string
+  /** IANA time zone for displaying dates (e.g. America/New_York). */
+  timezone: string
 }
 
 export interface AuthSession {

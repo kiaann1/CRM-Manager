@@ -4,7 +4,7 @@ import { PageFrame } from '../components/layout/PageFrame'
 import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
-import { formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
@@ -24,6 +24,7 @@ export function BoardsPage() {
     currentUser,
     users,
   } = useCrm()
+  const { formatDate } = useRegionalFormat()
   const toast = useToast()
   const [boardId, setBoardId] = useState(boards[0]?.id ?? '')
   const [view, setView] = useState<BoardView>('board')

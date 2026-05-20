@@ -7,7 +7,7 @@ import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { api } from '../lib/api/client'
 import { deleteConfirm } from '../lib/confirm'
-import { formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { stripHtml } from '../lib/html'
 import type { Document, RecordType } from '../types'
 
@@ -23,6 +23,7 @@ const RECORD_OPTIONS: { value: string; label: string }[] = [
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
 export function DocumentEditorPage() {
+  const { formatDate } = useRegionalFormat()
   const { docId } = useParams<{ docId: string }>()
   const isNew = !docId
   const navigate = useNavigate()

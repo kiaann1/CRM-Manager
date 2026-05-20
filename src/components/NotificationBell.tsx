@@ -26,8 +26,8 @@ export function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
-          <div className="absolute right-0 z-50 mt-2 w-80 rounded-xl border border-border bg-surface shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3 dark:border-slate-700">
+          <div className="absolute right-0 z-50 mt-2 flex w-[min(20rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3 dark:border-slate-700">
               <p className="text-sm font-semibold">Notifications</p>
               {unread > 0 && (
                 <button
@@ -39,7 +39,7 @@ export function NotificationBell() {
                 </button>
               )}
             </div>
-            <ul className="max-h-72 overflow-y-auto">
+            <ul className="max-h-[min(18rem,50dvh)] overflow-y-auto overscroll-contain">
               {mine.length === 0 ? (
                 <li className="px-4 py-6 text-center text-sm text-text-muted">All caught up</li>
               ) : (

@@ -30,6 +30,9 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
       preferences: {
         ...data.preferences,
         theme: normalizeTheme(data.preferences.theme),
+        currency: data.preferences.currency ?? defaultState.preferences.currency,
+        locale: data.preferences.locale ?? defaultState.preferences.locale,
+        timezone: data.preferences.timezone ?? defaultState.preferences.timezone,
       },
     })
     return data
@@ -44,7 +47,9 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
         if (!(e instanceof ApiError && e.status === 401)) {
           console.error('Bootstrap failed', e)
         }
-        setState((s) => ({ ...s, session: null }))
+        if (e instanceof ApiError && e.status === 401) {
+          setState((s) => ({ ...s, session: null }))
+        }
       } finally {
         setLoading(false)
       }
@@ -64,9 +69,15 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
       await reload()
     } catch (e) {
       await api.logout().catch(() => undefined)
+      const msg = e instanceof Error ? e.message : ''
+      const schemaHint =
+        e instanceof Error &&
+        /prisma|column|does not exist|P20\d{2}/i.test(msg)
+          ? ' Sync the DB: npm run db:push --prefix server (or run server/prisma/fix-bootstrap-columns.sql in your SQL console).'
+          : ''
       throw new Error(
         e instanceof Error
-          ? `Signed in but workspace failed to load: ${e.message}`
+          ? `Signed in but workspace failed to load: ${msg}${schemaHint}`
           : 'Signed in but workspace failed to load. Try npm run db:push --prefix server',
       )
     }
@@ -79,9 +90,18 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
 
   const setPreferences = useCallback(
     async (prefs: Partial<UserPreferences>) => {
-      const patch = { ...prefs }
+      const patch: Partial<UserPreferences> = { ...prefs }
       if (patch.theme !== undefined) {
         patch.theme = normalizeTheme(patch.theme)
+      }
+      if (patch.currency !== undefined) {
+        patch.currency = patch.currency.trim().toUpperCase()
+      }
+      if (patch.locale !== undefined) {
+        patch.locale = patch.locale.trim()
+      }
+      if (patch.timezone !== undefined) {
+        patch.timezone = patch.timezone.trim()
       }
       await api.updatePreferences(patch)
       setState((prev) => ({
@@ -105,7 +125,14 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
   const after = useCallback(
     async (fn: () => Promise<unknown>) => {
       await fn()
-      await reload()
+      try {
+        await reload()
+      } catch (e) {
+        console.warn(
+          '[CRM] Workspace reload failed after save; you are still signed in. Refresh the page to sync.',
+          e,
+        )
+      }
     },
     [reload],
   )

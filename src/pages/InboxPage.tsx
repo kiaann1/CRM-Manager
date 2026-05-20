@@ -8,7 +8,7 @@ import { Select } from '../components/ui/Select'
 import { Textarea } from '../components/ui/Textarea'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
-import { formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 
 type InboxFilter = 'all' | 'team' | 'direct' | 'unread'
 type ComposeTarget = 'team' | 'user'
@@ -24,6 +24,7 @@ export function InboxPage() {
     contacts,
     currentUser,
   } = useCrm()
+  const { formatDate } = useRegionalFormat()
   const toast = useToast()
 
   const [filter, setFilter] = useState<InboxFilter>('all')

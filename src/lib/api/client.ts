@@ -14,7 +14,36 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/** Paths where 401 must not trigger refresh+retry (avoid loops / public auth). */
+function shouldRetry401AfterRefresh(path: string): boolean {
+  const p = path.split('?')[0]
+  if (!p.startsWith('/api/')) return false
+  if (p.startsWith('/api/public')) return false
+  if (p.startsWith('/api/auth/')) {
+    if (
+      p === '/api/auth/login' ||
+      p === '/api/auth/register' ||
+      p === '/api/auth/logout' ||
+      p === '/api/auth/refresh' ||
+      p.startsWith('/api/auth/sso/')
+    ) {
+      return false
+    }
+    return true
+  }
+  return p.startsWith('/api/v1')
+}
+
+async function refreshAccessToken(): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  return res.ok
+}
+
+async function request<T>(path: string, init?: RequestInit, alreadyRetried = false): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     credentials: 'include',
@@ -23,6 +52,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers ?? {}),
     },
   })
+
+  if (res.status === 401 && !alreadyRetried && shouldRetry401AfterRefresh(path)) {
+    const refreshed = await refreshAccessToken()
+    if (refreshed) {
+      return request<T>(path, init, true)
+    }
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new ApiError(

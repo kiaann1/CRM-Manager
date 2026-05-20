@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
-import { formatCurrency, formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import type { QuoteStatus } from '../types'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
@@ -18,6 +18,7 @@ const statusOptions: { value: QuoteStatus; label: string }[] = [
 
 export function DealQuotesPanel({ dealId }: { dealId: string }) {
   const { quotes, products, addQuote, updateQuote, deleteQuote } = useCrm()
+  const { formatCurrency, formatDate } = useRegionalFormat()
   const toast = useToast()
   const dealQuotes = quotes.filter((q) => q.dealId === dealId)
   const [title, setTitle] = useState('')

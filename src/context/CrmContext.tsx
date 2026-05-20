@@ -29,7 +29,7 @@ export interface CrmContextValue extends CrmState {
   currentUser: CrmState['users'][0] | undefined
   login: (email: string, password: string) => Promise<void>
   logout: () => void | Promise<void>
-  setPreferences: (prefs: Partial<UserPreferences>) => void
+  setPreferences: (prefs: Partial<UserPreferences>) => Promise<void>
   resetDemoData: () => void
   patch: (updater: (prev: CrmState) => CrmState) => void
   refreshWorkspace: () => Promise<void>

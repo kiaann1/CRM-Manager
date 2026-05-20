@@ -67,7 +67,7 @@ export function UserMenu() {
             onClick={() => setOpen(false)}
           />
           <div
-            className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-xl border border-border bg-surface shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            className="absolute right-0 z-50 mt-2 max-h-[min(24rem,70dvh)] w-[min(18rem,calc(100vw-1.5rem))] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-xl border border-border bg-surface shadow-xl dark:border-slate-700 dark:bg-slate-900"
             role="menu"
           >
             <div className="border-b border-border bg-surface-muted/50 px-4 py-4 dark:border-slate-700 dark:bg-slate-800/50">

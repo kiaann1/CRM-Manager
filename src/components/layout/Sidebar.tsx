@@ -107,7 +107,7 @@ export function Sidebar({
         id={id}
         className={[
           'glass-panel flex shrink-0 flex-col border-r border-border/80',
-          'fixed inset-y-0 left-0 z-40 h-dvh w-[min(17.5rem,88vw)] max-w-[280px] transition-transform duration-200 ease-out lg:static lg:z-auto lg:h-auto lg:min-h-screen lg:max-w-none lg:w-[15.5rem] lg:translate-x-0 lg:visible lg:pointer-events-auto',
+          'fixed inset-y-0 left-0 z-40 h-dvh w-[min(17.5rem,88vw)] max-w-[280px] transition-transform duration-200 ease-out lg:static lg:z-auto lg:h-full lg:min-h-0 lg:max-w-none lg:w-[15.5rem] lg:translate-x-0 lg:visible lg:pointer-events-auto',
           mobileOpen
             ? 'translate-x-0'
             : '-translate-x-full max-lg:pointer-events-none max-lg:invisible',

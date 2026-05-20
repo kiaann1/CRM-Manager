@@ -1,7 +1,7 @@
 import { Calendar, Mail, Phone, StickyNote } from 'lucide-react'
 import { useMemo } from 'react'
 import { useCrm } from '../../context/CrmContext'
-import { formatDate } from '../../lib/format'
+import { useRegionalFormat } from '../../lib/useRegionalFormat'
 import { DashboardPanel } from './DashboardPanel'
 
 const typeConfig: Record<
@@ -32,6 +32,7 @@ const typeConfig: Record<
 
 export function ActivityFeed({ limit = 10 }: { limit?: number }) {
   const crm = useCrm()
+  const { formatDate } = useRegionalFormat()
 
   const items = useMemo(() => {
     return [...crm.activities]

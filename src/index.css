@@ -52,9 +52,15 @@ body {
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
   min-width: 0;
   width: 100%;
   overflow-x: clip;
+}
+
+/* When dialogs lock scroll, hide the app main scrollbar (still use Modal inner scroll). */
+body[data-scroll-lock-count] main.page-content {
+  overflow: hidden !important;
 }
 
 /* Shared form + surface patterns */

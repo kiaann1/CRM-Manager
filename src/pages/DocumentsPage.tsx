@@ -6,11 +6,12 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
-import { formatDate } from '../lib/format'
+import { useRegionalFormat } from '../lib/useRegionalFormat'
 import { stripHtml } from '../lib/html'
 
 export function DocumentsPage() {
   const { documents, deleteDocument } = useCrm()
+  const { formatDate } = useRegionalFormat()
   const toast = useToast()
   const navigate = useNavigate()
 
