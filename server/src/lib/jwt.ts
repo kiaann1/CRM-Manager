@@ -50,6 +50,12 @@ async function prismaRefreshCreate(userId: string, tokenHash: string, expiresAt:
   })
 }
 
+/** Idempotent — safe when token was already rotated/deleted (e.g. parallel refresh). */
+async function deleteRefreshTokenByHash(tokenHash: string) {
+  const { prisma } = await import('./prisma.js')
+  await prisma.refreshToken.deleteMany({ where: { tokenHash } })
+}
+
 export async function rotateRefreshToken(oldToken: string): Promise<{
   token: string
   userId: string
@@ -58,10 +64,11 @@ export async function rotateRefreshToken(oldToken: string): Promise<{
   const tokenHash = hashRefreshToken(oldToken)
   const existing = await prisma.refreshToken.findUnique({ where: { tokenHash } })
   if (!existing || existing.expiresAt < new Date()) {
-    if (existing) await prisma.refreshToken.delete({ where: { tokenHash } })
+    await deleteRefreshTokenByHash(tokenHash)
     return null
   }
-  await prisma.refreshToken.delete({ where: { tokenHash } })
-  const created = await createRefreshTokenRecord(existing.userId)
-  return { token: created.token, userId: existing.userId }
+  const userId = existing.userId
+  await deleteRefreshTokenByHash(tokenHash)
+  const created = await createRefreshTokenRecord(userId)
+  return { token: created.token, userId }
 }

@@ -107,7 +107,7 @@ export const defaultState: CrmState = {
     {
       id: 'tk-1', title: 'Send revised contract', description: 'Include updated SLA terms from legal.',
       dueDate: '2026-05-20', priority: 'high', status: 'todo', contactId: 'ct-1', dealId: 'dl-1',
-      ownerId: USER_SARAH, parentId: null, dependsOn: [], recurring: 'none', estimateMinutes: 60,
+      ownerId: USER_SARAH, assigneeIds: [USER_SARAH], parentId: null, dependsOn: [], recurring: 'none', estimateMinutes: 60,
       loggedMinutes: 0, sprintId: 'sp-1', goalId: 'goal-1', checklist: [
         { id: 'cl-1', text: 'Legal review', done: true },
         { id: 'cl-2', text: 'Send PDF', done: false },
@@ -116,13 +116,13 @@ export const defaultState: CrmState = {
     {
       id: 'tk-2', title: 'Schedule demo with Northwind', description: 'Walk through POS integration flow.',
       dueDate: '2026-05-22', priority: 'medium', status: 'in_progress', contactId: 'ct-2', dealId: 'dl-2',
-      ownerId: USER_MARCUS, parentId: null, dependsOn: [], recurring: 'weekly', estimateMinutes: 30,
+      ownerId: USER_MARCUS, assigneeIds: [USER_MARCUS, USER_SARAH], parentId: null, dependsOn: [], recurring: 'weekly', estimateMinutes: 30,
       loggedMinutes: 15, sprintId: 'sp-1', goalId: null, checklist: [], tagIds: [], createdAt: '2026-05-12T10:00:00Z',
     },
     {
       id: 'tk-3', title: 'Follow up on pilot feedback', description: '', dueDate: '2026-05-25',
       priority: 'low', status: 'todo', contactId: 'ct-3', dealId: 'dl-3', ownerId: USER_SARAH,
-      parentId: null, dependsOn: ['tk-2'], recurring: 'none', estimateMinutes: 15, loggedMinutes: 0,
+      assigneeIds: [USER_SARAH], parentId: null, dependsOn: ['tk-2'], recurring: 'none', estimateMinutes: 15, loggedMinutes: 0,
       sprintId: null, goalId: null, checklist: [], tagIds: [], createdAt: '2026-05-14T10:00:00Z',
     },
   ],

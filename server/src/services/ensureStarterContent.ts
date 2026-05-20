@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js'
+import { syncTaskAssignees } from './taskAssignees.js'
 
 /**
  * Idempotent demo content for orgs missing key entities (new registrations, partial seeds).
@@ -235,6 +236,13 @@ export async function ensureOrgStarterContent(organizationId: string) {
         },
       ],
     })
+    const starterTasks = await prisma.task.findMany({
+      where: { organizationId },
+      select: { id: true, ownerId: true },
+    })
+    for (const t of starterTasks) {
+      await syncTaskAssignees(t.id, organizationId, [t.ownerId]).catch(() => undefined)
+    }
   }
 
   if (activityCount === 0 && deal) {

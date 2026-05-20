@@ -162,6 +162,8 @@ export interface Task {
   contactId: string | null
   dealId: string | null
   ownerId: string
+  /** Team members assigned to this task (includes primary owner). */
+  assigneeIds: string[]
   parentId: string | null
   dependsOn: string[]
   recurring: 'none' | 'weekly' | 'monthly'

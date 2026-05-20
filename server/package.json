@@ -10,6 +10,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:fix:bootstrap": "tsx scripts/neon-apply-bootstrap-fix.ts",
+    "db:fix:task-assignees": "tsx scripts/neon-apply-task-assignees.ts",
     "db:push:neon": "tsx scripts/neon-db-push.ts",
     "db:setup:neon": "npm run db:push:neon && npm run db:seed",
     "db:migrate": "prisma migrate dev",

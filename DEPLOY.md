@@ -17,7 +17,7 @@ Use this when moving CRM Manager from local dev to production.
 ## Database
 
 1. Run schema sync when TCP works: `npm run db:push` from `server/`
-2. If port **5432** is blocked: run `server/prisma/fix-bootstrap-columns.sql` in Neon SQL editor, or `npm run db:fix:bootstrap` from `server/`
+2. If port **5432** is blocked: run **`server/prisma/fix-bootstrap-columns.sql`** in Neon SQL editor (full patch), or only **`server/prisma/patch-latest.sql`** if the error mentions `Notification` or `SavedView`, or run `npm run db:fix:bootstrap` from `server/`
 3. Optional seed: `npm run db:seed` from `server/`
 
 ## Hosting (typical)

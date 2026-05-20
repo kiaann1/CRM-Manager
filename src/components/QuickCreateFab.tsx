@@ -81,6 +81,7 @@ export function QuickCreateFab() {
         contactId: null,
         dealId: null,
         ownerId,
+        assigneeIds: [ownerId],
         parentId: null,
         dependsOn: [],
         recurring: 'none',

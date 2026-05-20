@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useModalPresence } from '../../lib/modalPresence'
 import { lockDocumentScroll } from '../../lib/scrollLock'
 import { Button } from './Button'
@@ -14,8 +15,8 @@ export type ModalStep = {
 export type ModalSize = 'md' | 'lg'
 
 const SIZE_CLASS: Record<ModalSize, string> = {
-  md: 'max-w-[min(100vw-1.5rem,32rem)]',
-  lg: 'max-w-[min(100vw-1.5rem,42rem)]',
+  md: 'max-w-[min(100vw-1.5rem,28rem)] sm:max-w-[min(100vw-2rem,32rem)]',
+  lg: 'max-w-[min(100vw-1.5rem,36rem)] sm:max-w-[min(100vw-2rem,42rem)]',
 }
 
 interface ModalProps {
@@ -149,55 +150,61 @@ export function Modal({
       ? `${title} — ${steps[onWizardStep].label}`
       : title
 
-  return (
+  const hasFooter = Boolean(defaultWizardFooter || (footer && !isWizard))
+
+  const dialog = (
     <div
-      className="fixed inset-0 z-50 flex min-h-0 items-center justify-center overflow-hidden overscroll-none p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
+      className="fixed inset-0 z-[200] flex min-h-0 items-end justify-center overflow-hidden overscroll-none sm:items-center sm:p-4 sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:pt-[max(1rem,env(safe-area-inset-top))]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <div
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-900/55 backdrop-blur-[2px] sm:backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
       <div
-        className={`relative flex min-h-0 w-full ${SIZE_CLASS[size]} max-h-[min(90dvh,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl bg-surface shadow-xl ${panelClassName}`.trim()}
+        className={`relative flex min-h-0 w-full ${SIZE_CLASS[size]} max-h-[min(92dvh,100dvh)] flex-col overflow-hidden rounded-t-2xl border border-border bg-surface shadow-2xl sm:max-h-[min(88dvh,calc(100dvh-2rem))] sm:rounded-2xl ${panelClassName}`.trim()}
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
-          <h2 id="modal-title" className="min-w-0 flex-1 text-lg font-semibold text-text">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3.5 sm:px-6 sm:py-4">
+          <h2 id="modal-title" className="min-w-0 flex-1 text-base font-semibold text-text sm:text-lg">
             {headerTitle}
           </h2>
           <Button variant="ghost" className="!p-2 shrink-0" onClick={onClose} aria-label="Close">
             <X size={18} />
           </Button>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
-            {isWizard ? (
-              <>
-                <StepIndicator steps={steps} active={onWizardStep} />
-                {steps.map((s, i) => (
-                  <div
-                    key={s.id}
-                    className={i === onWizardStep ? 'block' : 'hidden'}
-                    aria-hidden={i !== onWizardStep}
-                  >
-                    {s.content}
-                  </div>
-                ))}
-              </>
-            ) : (
-              children
-            )}
-          </div>
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5 ${
+            hasFooter ? 'pb-2' : 'pb-[max(1rem,env(safe-area-inset-bottom))]'
+          }`}
+        >
+          {isWizard ? (
+            <>
+              <StepIndicator steps={steps} active={onWizardStep} />
+              {steps.map((s, i) => (
+                <div
+                  key={s.id}
+                  className={i === onWizardStep ? 'block' : 'hidden'}
+                  aria-hidden={i !== onWizardStep}
+                >
+                  {s.content}
+                </div>
+              ))}
+            </>
+          ) : (
+            children
+          )}
         </div>
-        {(defaultWizardFooter || (footer && !isWizard)) && (
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-3 sm:px-6 sm:py-4">
+        {hasFooter && (
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border bg-surface px-4 py-3.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-4 sm:pb-4">
             {isWizard ? defaultWizardFooter : footer}
           </div>
         )}
       </div>
     </div>
   )
+
+  return createPortal(dialog, document.body)
 }

@@ -144,7 +144,15 @@ authRouter.post('/refresh', async (req, res) => {
     res.status(401).json({ error: 'No refresh token' })
     return
   }
-  const rotated = await rotateRefreshToken(token)
+  let rotated: Awaited<ReturnType<typeof rotateRefreshToken>>
+  try {
+    rotated = await rotateRefreshToken(token)
+  } catch (err) {
+    console.error('[POST /auth/refresh]', err)
+    clearAuthCookies(res)
+    res.status(401).json({ error: 'Refresh expired' })
+    return
+  }
   if (!rotated) {
     clearAuthCookies(res)
     res.status(401).json({ error: 'Refresh expired' })

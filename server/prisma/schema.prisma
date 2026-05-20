@@ -74,6 +74,7 @@ model User {
   ownedDeals     Deal[]         @relation("DealOwner")
   ownedLeads     Lead[]         @relation("LeadOwner")
   ownedTasks     Task[]         @relation("TaskOwner")
+  taskAssignments TaskAssignee[]
   auditLogs      AuditLog[]
   notifications  Notification[]
   invitesSent    OrganizationInvite[] @relation("InvitesSent")
@@ -344,9 +345,21 @@ model Task {
   contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
   deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: SetNull)
   owner        User         @relation("TaskOwner", fields: [ownerId], references: [id])
+  assignees    TaskAssignee[]
   sprint       Sprint?      @relation(fields: [sprintId], references: [id])
   goal         Goal?        @relation(fields: [goalId], references: [id])
   timeEntries  TimeEntry[]
+}
+
+model TaskAssignee {
+  taskId String
+  userId String
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([userId])
 }
 
 model Activity {

@@ -7,6 +7,28 @@ import { prisma } from '../lib/prisma.js'
 import { normalizeTheme } from '../lib/theme.js'
 import { ensureOrgIntegrations } from './ensureIntegrations.js'
 import { ensureOrgStarterContent } from './ensureStarterContent.js'
+import { loadAssigneesByTaskId } from './taskAssignees.js'
+
+const SCHEMA_PATCH_HINT =
+  'Run server/prisma/fix-bootstrap-columns.sql in Neon SQL (or npm run db:fix:bootstrap from server/).'
+
+function isSchemaDrift(err: unknown): boolean {
+  const code = (err as { code?: string })?.code
+  return code === 'P2022' || code === 'P2021'
+}
+
+/** Load data when DB is behind Prisma; avoids blocking sign-in on a single missing column/table. */
+async function loadOptional<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn()
+  } catch (err) {
+    if (isSchemaDrift(err)) {
+      console.warn(`[bootstrap] ${label} skipped — ${SCHEMA_PATCH_HINT}`)
+      return fallback
+    }
+    throw err
+  }
+}
 
 function parseProductSpecifications(json: unknown): { name: string; value: string }[] {
   if (!Array.isArray(json)) return []
@@ -79,6 +101,7 @@ export async function buildBootstrap(orgId: string, userId: string) {
     auditLog,
     timeEntries,
     savedViews,
+    taskAssigneesByTaskId,
   ] = await Promise.all([
     prisma.membership.findMany({
       where: { organizationId: orgId },
@@ -141,11 +164,13 @@ export async function buildBootstrap(orgId: string, userId: string) {
       orderBy: { createdAt: 'desc' },
       take: 500,
     }),
-    prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    }),
+    loadOptional('notifications', () =>
+      prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+    []),
     prisma.marketingForm.findMany({ where: { organizationId: orgId } }),
     prisma.campaign.findMany({ where: { organizationId: orgId } }),
     prisma.ticket.findMany({ where: { organizationId: orgId } }),
@@ -158,13 +183,16 @@ export async function buildBootstrap(orgId: string, userId: string) {
     prisma.timeEntry.findMany({
       where: { task: { organizationId: orgId } },
     }),
-    prisma.savedView.findMany({
-      where: {
-        organizationId: orgId,
-        OR: [{ userId }, { shared: true }],
-      },
-      orderBy: { createdAt: 'asc' },
-    }),
+    loadOptional('savedViews', () =>
+      prisma.savedView.findMany({
+        where: {
+          organizationId: orgId,
+          OR: [{ userId }, { shared: true }],
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+    []),
+    loadOptional('Task assignees', () => loadAssigneesByTaskId(orgId), new Map<string, string[]>()),
   ])
 
   const inbox = await loadInboxForOrg(orgId).catch((err) => {
@@ -308,6 +336,10 @@ export async function buildBootstrap(orgId: string, userId: string) {
       contactId: t.contactId,
       dealId: t.dealId,
       ownerId: t.ownerId,
+      assigneeIds: (() => {
+        const ids = taskAssigneesByTaskId.get(t.id)
+        return ids?.length ? ids : [t.ownerId]
+      })(),
       parentId: t.parentId,
       dependsOn: t.dependsOn,
       recurring: t.recurring as 'none' | 'weekly' | 'monthly',

@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Select } from '../components/ui/Select'
 import { Textarea } from '../components/ui/Textarea'
+import { UserMultiPicker } from '../components/UserMultiPicker'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
@@ -17,57 +18,95 @@ import { PRIORITY_BADGE } from '../lib/theme'
 
 type TaskForm = Omit<Task, 'id' | 'createdAt'>
 
-const emptyForm: TaskForm = {
-  title: '',
-  description: '',
-  dueDate: new Date().toISOString().slice(0, 10),
-  priority: 'medium',
-  status: 'todo',
-  contactId: null,
-  dealId: null,
-  ownerId: USER_SARAH,
-  parentId: null,
-  dependsOn: [],
-  recurring: 'none',
-  estimateMinutes: 0,
-  loggedMinutes: 0,
-  sprintId: null,
-  goalId: null,
-  checklist: [],
-  tagIds: [],
+function buildEmptyForm(defaultUserId: string): TaskForm {
+  return {
+    title: '',
+    description: '',
+    dueDate: new Date().toISOString().slice(0, 10),
+    priority: 'medium',
+    status: 'todo',
+    contactId: null,
+    dealId: null,
+    ownerId: defaultUserId,
+    assigneeIds: [defaultUserId],
+    parentId: null,
+    dependsOn: [],
+    recurring: 'none',
+    estimateMinutes: 0,
+    loggedMinutes: 0,
+    sprintId: null,
+    goalId: null,
+    checklist: [],
+    tagIds: [],
+  }
+}
+
+function taskAssignees(task: Task): string[] {
+  return task.assigneeIds?.length ? task.assigneeIds : [task.ownerId]
+}
+
+function normalizeTaskForm(form: TaskForm): TaskForm {
+  const assigneeIds = form.assigneeIds.length ? form.assigneeIds : [form.ownerId]
+  return {
+    ...form,
+    assigneeIds,
+    ownerId: assigneeIds[0] ?? form.ownerId,
+  }
 }
 
 const priorityColors = PRIORITY_BADGE as Record<TaskPriority, string>
+
+const STATUS_STEPS: { value: TaskStatus; label: string }[] = [
+  { value: 'todo', label: 'To do' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'done', label: 'Done' },
+]
 
 export function TasksPage() {
   const {
     tasks,
     contacts,
     deals,
+    users,
+    getUser,
+    currentUser,
     addTask,
     updateTask,
     deleteTask,
     setTaskStatus,
     logTime,
   } = useCrm()
+  const defaultUserId = currentUser?.id ?? users[0]?.id ?? USER_SARAH
   const { formatDate } = useRegionalFormat()
   const toast = useToast()
-  const [filter, setFilter] = useState<TaskStatus | 'all'>('all')
+  const [filter, setFilter] = useState<TaskStatus | 'all'>('todo')
   const [modalOpen, setModalOpen] = useState(false)
   const [timeModal, setTimeModal] = useState<Task | null>(null)
   const [logMinutes, setLogMinutes] = useState(30)
   const [logNote, setLogNote] = useState('')
   const [editing, setEditing] = useState<Task | null>(null)
-  const [form, setForm] = useState<TaskForm>(emptyForm)
+  const [form, setForm] = useState<TaskForm>(() => buildEmptyForm(defaultUserId))
+
+  const statusCounts = tasks.reduce(
+    (acc, t) => {
+      acc[t.status] = (acc[t.status] ?? 0) + 1
+      return acc
+    },
+    {} as Record<TaskStatus, number>,
+  )
 
   const filtered =
     filter === 'all' ? tasks : tasks.filter((t) => t.status === filter)
 
-  const sorted = [...filtered].sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+  const sorted = [...filtered].sort((a, b) => {
+    if (a.status === 'done' && b.status !== 'done') return 1
+    if (b.status === 'done' && a.status !== 'done') return -1
+    return a.dueDate.localeCompare(b.dueDate)
+  })
 
   const openCreate = () => {
     setEditing(null)
-    setForm(emptyForm)
+    setForm(buildEmptyForm(defaultUserId))
     setModalOpen(true)
   }
 
@@ -82,6 +121,7 @@ export function TasksPage() {
       contactId: task.contactId,
       dealId: task.dealId,
       ownerId: task.ownerId,
+      assigneeIds: taskAssignees(task),
       parentId: task.parentId,
       dependsOn: task.dependsOn,
       recurring: task.recurring,
@@ -97,11 +137,12 @@ export function TasksPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const payload = normalizeTaskForm(form)
     if (editing) {
-      updateTask(editing.id, form)
+      updateTask(editing.id, payload)
       toast.success('Task updated')
     } else {
-      addTask(form)
+      addTask(payload)
       toast.success('Task created')
     }
     setModalOpen(false)
@@ -140,16 +181,23 @@ export function TasksPage() {
       }
     >
         <div className="mb-6 flex flex-wrap gap-2">
-          {filters.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFilter(f.id)}
-              className={`chip-filter ${filter === f.id ? 'chip-filter--active' : ''}`}
-            >
-              {f.label}
-            </button>
-          ))}
+          {filters.map((f) => {
+            const count =
+              f.id === 'all'
+                ? tasks.length
+                : (statusCounts[f.id as TaskStatus] ?? 0)
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFilter(f.id)}
+                className={`chip-filter ${filter === f.id ? 'chip-filter--active' : ''}`}
+              >
+                {f.label}
+                <span className="ml-1 tabular-nums opacity-70">{count}</span>
+              </button>
+            )
+          })}
         </div>
 
         {sorted.length === 0 ? (
@@ -175,12 +223,13 @@ export function TasksPage() {
               >
                 <button
                   type="button"
-                  onClick={() =>
-                    setTaskStatus(
-                      task.id,
-                      task.status === 'done' ? 'todo' : 'done',
-                    )
-                  }
+                  onClick={() => {
+                    const markingDone = task.status !== 'done'
+                    setTaskStatus(task.id, markingDone ? 'done' : 'todo')
+                    if (markingDone && filter !== 'all' && filter !== 'done') {
+                      toast.success('Moved to Done')
+                    }
+                  }}
                   className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition ${
                     task.status === 'done'
                       ? 'border-emerald-500 bg-emerald-500 text-white'
@@ -212,6 +261,26 @@ export function TasksPage() {
                     )}
                   </button>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <div
+                      className="inline-flex rounded-lg border border-border p-0.5"
+                      role="group"
+                      aria-label="Task progress"
+                    >
+                      {STATUS_STEPS.map((step) => (
+                        <button
+                          key={step.value}
+                          type="button"
+                          onClick={() => setTaskStatus(task.id, step.value)}
+                          className={`rounded-md px-2 py-0.5 text-xs font-medium transition ${
+                            task.status === step.value
+                              ? 'bg-brand-600 text-white shadow-sm'
+                              : 'text-text-muted hover:bg-surface-muted hover:text-text'
+                          }`}
+                        >
+                          {step.label}
+                        </button>
+                      ))}
+                    </div>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${priorityColors[task.priority]}`}
                     >
@@ -220,9 +289,17 @@ export function TasksPage() {
                     <span className="text-xs text-text-muted">
                       Due {formatDate(task.dueDate)}
                     </span>
-                    <span className="text-xs capitalize text-text-muted">
-                      {task.status.replace('_', ' ')}
-                    </span>
+                    {taskAssignees(task).map((uid) => {
+                      const name = getUser(uid)?.name ?? 'Unknown'
+                      return (
+                        <span
+                          key={uid}
+                          className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-text-muted"
+                        >
+                          {name}
+                        </span>
+                      )
+                    })}
                     {task.loggedMinutes > 0 && (
                       <span className="text-xs text-text-muted">
                         · {task.loggedMinutes}m logged
@@ -263,6 +340,7 @@ export function TasksPage() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
+        size="lg"
         title={editing ? 'Edit task' : 'New task'}
         footer={
           <>
@@ -317,6 +395,16 @@ export function TasksPage() {
               { value: 'in_progress', label: 'In progress' },
               { value: 'done', label: 'Done' },
             ]}
+          />
+          <UserMultiPicker
+            value={form.assigneeIds}
+            onChange={(assigneeIds) =>
+              setForm({
+                ...form,
+                assigneeIds,
+                ownerId: assigneeIds[0] ?? form.ownerId,
+              })
+            }
           />
           <Select
             label="Contact"

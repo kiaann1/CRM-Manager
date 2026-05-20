@@ -428,6 +428,12 @@ export function RecordDrawer({
                       <p className="truncate text-sm font-medium">{t.title}</p>
                       <p className="text-xs capitalize text-text-muted">
                         {t.status.replace('_', ' ')} · due {formatDate(t.dueDate)}
+                        {(() => {
+                          const names = (t.assigneeIds?.length ? t.assigneeIds : [t.ownerId])
+                            .map((id) => crm.getUser(id)?.name)
+                            .filter(Boolean)
+                          return names.length ? ` · ${names.join(', ')}` : ''
+                        })()}
                       </p>
                     </div>
                   </li>

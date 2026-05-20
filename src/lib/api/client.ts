@@ -175,6 +175,9 @@ export const api = {
   deleteTask: (id: string) =>
     request(`/api/v1/tasks/${id}`, { method: 'DELETE' }),
 
+  updateTask: (id: string, data: Record<string, unknown>) =>
+    request(`/api/v1/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
   updateLead: (id: string, data: unknown) =>
     request(`/api/v1/leads/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 

@@ -70,3 +70,26 @@ DO $$ BEGIN
     FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+-- Task multi-assignee (many-to-many)
+CREATE TABLE IF NOT EXISTS "TaskAssignee" (
+  "taskId" TEXT NOT NULL,
+  "userId" TEXT NOT NULL,
+  CONSTRAINT "TaskAssignee_pkey" PRIMARY KEY ("taskId", "userId")
+);
+CREATE INDEX IF NOT EXISTS "TaskAssignee_userId_idx" ON "TaskAssignee" ("userId");
+DO $$ BEGIN
+  ALTER TABLE "TaskAssignee" ADD CONSTRAINT "TaskAssignee_taskId_fkey"
+    FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE "TaskAssignee" ADD CONSTRAINT "TaskAssignee_userId_fkey"
+    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+INSERT INTO "TaskAssignee" ("taskId", "userId")
+SELECT t.id, t."ownerId" FROM "Task" t
+WHERE NOT EXISTS (
+  SELECT 1 FROM "TaskAssignee" ta WHERE ta."taskId" = t.id
+);

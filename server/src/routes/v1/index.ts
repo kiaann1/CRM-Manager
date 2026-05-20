@@ -7,6 +7,7 @@ import type { AuthRequest } from '../../middleware/auth.js'
 import { requireAuth, requireRole } from '../../middleware/auth.js'
 import { computeLeadScore } from '../../lib/lead-score.js'
 import { buildBootstrap } from '../../services/bootstrap.js'
+import { syncTaskAssignees } from '../../services/taskAssignees.js'
 import { runDealStageAutomations, runLeadCreatedAutomations } from '../../services/automations.js'
 import { emitCrmEvent } from '../../services/crmEvents.js'
 import { dispatchWebhooks } from '../../services/webhooks.js'
@@ -429,45 +430,91 @@ v1Router.delete('/leads/:id', async (req: AuthRequest, res) => {
 })
 
 // ——— Tasks ———
+const taskBodySchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  dueDate: z.string().optional(),
+  priority: z.string().optional(),
+  status: z.enum(['todo', 'in_progress', 'done']).optional(),
+  ownerId: z.string().optional(),
+  assigneeIds: z.array(z.string()).optional(),
+  dealId: z.string().nullable().optional(),
+  contactId: z.string().nullable().optional(),
+  parentId: z.string().nullable().optional(),
+  dependsOn: z.array(z.string()).optional(),
+  recurring: z.string().optional(),
+  estimateMinutes: z.number().optional(),
+  loggedMinutes: z.number().optional(),
+  sprintId: z.string().nullable().optional(),
+  goalId: z.string().nullable().optional(),
+  checklist: z
+    .array(
+      z.object({
+        id: z.string(),
+        text: z.string(),
+        done: z.boolean(),
+      }),
+    )
+    .optional(),
+})
+
 v1Router.post('/tasks', async (req: AuthRequest, res) => {
-  const body = z
-    .object({
-      title: z.string(),
-      description: z.string().optional(),
-      dueDate: z.string().optional(),
-      priority: z.string().optional(),
-      status: z.string().optional(),
-      ownerId: z.string(),
-      dealId: z.string().nullable().optional(),
-      contactId: z.string().nullable().optional(),
-    })
+  const body = taskBodySchema
+    .merge(z.object({ title: z.string(), ownerId: z.string() }))
     .parse(req.body)
+  const orgId = req.auth!.orgId
+  const assigneeIds =
+    body.assigneeIds?.length ? body.assigneeIds : [body.ownerId]
+  const ownerId = assigneeIds[0] ?? body.ownerId
   const task = await prisma.task.create({
     data: {
-      organizationId: req.auth!.orgId,
+      organizationId: orgId,
       title: body.title,
       description: body.description ?? '',
       dueDate: body.dueDate ? new Date(body.dueDate) : null,
       priority: body.priority ?? 'medium',
       status: body.status ?? 'todo',
-      ownerId: body.ownerId,
+      ownerId,
       dealId: body.dealId ?? null,
       contactId: body.contactId ?? null,
     },
   })
-  res.status(201).json(task)
+  let synced = assigneeIds
+  try {
+    synced = await syncTaskAssignees(task.id, orgId, assigneeIds)
+  } catch (err) {
+    console.warn('[POST /tasks] assignee sync skipped:', err)
+  }
+  res.status(201).json({ ...task, assigneeIds: synced })
 })
 
 v1Router.patch('/tasks/:id', async (req: AuthRequest, res) => {
-  const body = req.body as Record<string, unknown>
+  const body = taskBodySchema.parse(req.body)
+  const orgId = req.auth!.orgId
+  const { assigneeIds, ...taskFields } = body
+  if (assigneeIds?.length) {
+    taskFields.ownerId = assigneeIds[0]
+  }
   const task = await prisma.task.update({
-    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+    where: { id: param(req.params.id), organizationId: orgId },
     data: {
-      ...body,
-      dueDate: body.dueDate ? new Date(String(body.dueDate)) : undefined,
+      ...taskFields,
+      dueDate: taskFields.dueDate ? new Date(taskFields.dueDate) : undefined,
     },
   })
-  res.json(task)
+  let synced: string[] | undefined
+  if (assigneeIds !== undefined) {
+    try {
+      synced = await syncTaskAssignees(task.id, orgId, assigneeIds)
+    } catch (err) {
+      console.warn('[PATCH /tasks] assignee sync skipped:', err)
+      synced = assigneeIds
+    }
+  }
+  res.json({
+    ...task,
+    assigneeIds: synced ?? assigneeIds,
+  })
 })
 
 v1Router.delete('/tasks/:id', async (req: AuthRequest, res) => {

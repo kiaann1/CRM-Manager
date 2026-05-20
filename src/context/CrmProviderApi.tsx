@@ -13,8 +13,39 @@ import {
 import { api, ApiError } from '../lib/api/client'
 import { defaultState } from '../lib/storage'
 import { normalizeTheme } from '../lib/theme'
-import type { CrmState, DealStage, TaskStatus, UserPreferences } from '../types'
+import type { CrmState, DealStage, Task, TaskStatus, UserPreferences } from '../types'
 import { WorkspaceLoader } from '../components/layout/WorkspaceLoader'
+
+const TASK_API_KEYS: (keyof Task)[] = [
+  'title',
+  'description',
+  'dueDate',
+  'priority',
+  'status',
+  'contactId',
+  'dealId',
+  'ownerId',
+  'assigneeIds',
+  'parentId',
+  'dependsOn',
+  'recurring',
+  'estimateMinutes',
+  'loggedMinutes',
+  'sprintId',
+  'goalId',
+  'checklist',
+]
+
+function taskApiPayload(data: Partial<Task>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const key of TASK_API_KEYS) {
+    if (data[key] !== undefined) out[key] = data[key]
+  }
+  if (data.assigneeIds?.length) {
+    out.ownerId = data.assigneeIds[0]
+  }
+  return out
+}
 import type { CrmContextValue } from './CrmContext'
 
 const CrmApiContext = createContext<CrmContextValue | null>(null)
@@ -120,6 +151,35 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
   const patch = useCallback((updater: (prev: CrmState) => CrmState) => {
     setState(updater)
   }, [])
+
+  const syncTask = useCallback(
+    (id: string, data: Partial<Task>) => {
+      let snapshot: Task | undefined
+      patch((s) => {
+        const current = s.tasks.find((t) => t.id === id)
+        if (!current) return s
+        snapshot = current
+        return {
+          ...s,
+          tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...data } : t)),
+        }
+      })
+      void (async () => {
+        try {
+          await api.updateTask(id, taskApiPayload(data))
+        } catch (e) {
+          if (snapshot) {
+            patch((s) => ({
+              ...s,
+              tasks: s.tasks.map((t) => (t.id === id ? snapshot! : t)),
+            }))
+          }
+          console.warn('[CRM] Task sync failed; reverted UI.', e)
+        }
+      })()
+    },
+    [patch],
+  )
 
   const uid = state.session?.userId ?? ''
 
@@ -233,33 +293,15 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+            body: JSON.stringify(taskApiPayload(data)),
           }),
         )
       },
-      updateTask: (id, data) => {
-        void after(() =>
-          fetch(`${api.baseUrl}/api/v1/tasks/${id}`, {
-            method: 'PATCH',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-          }),
-        )
-      },
+      updateTask: (id, data) => syncTask(id, data),
       deleteTask: (id) => {
         void after(() => api.deleteTask(id))
       },
-      setTaskStatus: (id, status: TaskStatus) => {
-        void after(() =>
-          fetch(`${api.baseUrl}/api/v1/tasks/${id}`, {
-            method: 'PATCH',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status }),
-          }),
-        )
-      },
+      setTaskStatus: (id, status: TaskStatus) => syncTask(id, { status }),
       addActivity: (data) => {
         void after(() => api.createActivity(data))
       },
@@ -446,7 +488,7 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
       },
       ...getters,
     }
-  }, [state, login, logout, setPreferences, resetDemoData, patch, after, reload, uid])
+  }, [state, login, logout, setPreferences, resetDemoData, patch, after, reload, uid, syncTask])
 
   if (loading) {
     return <WorkspaceLoader />
