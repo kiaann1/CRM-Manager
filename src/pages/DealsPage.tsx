@@ -123,8 +123,11 @@ export function DealsPage() {
     setModalOpen(true)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const createDeal = () => {
+    if (!form.title.trim()) {
+      toast.error('Deal title is required')
+      return
+    }
     addDeal(form)
     toast.success('Deal created')
     setModalOpen(false)
@@ -327,66 +330,74 @@ export function DealsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="New deal"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="deal-form">
-              Create
-            </Button>
-          </>
-        }
-      >
-        <form id="deal-form" className="space-y-4" onSubmit={handleSubmit}>
-          <Input
-            label="Deal title"
-            required
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-          />
-          <Input
-            label={`Value (${preferences.currency})`}
-            type="number"
-            min={0}
-            required
-            value={form.value || ''}
-            onChange={(e) => setForm({ ...form, value: Number(e.target.value) || 0 })}
-          />
-          <Select
-            label="Stage"
-            value={form.stage}
-            onChange={(e) => setForm({ ...form, stage: e.target.value as DealStage })}
-            options={boardStages.map((s) => ({ value: s.id, label: s.label }))}
-          />
-          <Input
-            label="Expected close"
-            type="date"
-            required
-            value={form.expectedClose}
-            onChange={(e) => setForm({ ...form, expectedClose: e.target.value })}
-          />
-          <Select
-            label="Contact"
-            value={form.contactId ?? ''}
-            onChange={(e) => setForm({ ...form, contactId: e.target.value || null })}
-            options={contactOptions}
-          />
-          <Select
-            label="Company"
-            value={form.companyId ?? ''}
-            onChange={(e) => setForm({ ...form, companyId: e.target.value || null })}
-            options={companyOptions}
-          />
-          <Select
-            label="Owner"
-            value={form.ownerId}
-            onChange={(e) => setForm({ ...form, ownerId: e.target.value })}
-            options={users.map((u) => ({ value: u.id, label: u.name }))}
-          />
-          <TagPicker value={form.tagIds} onChange={(tagIds) => setForm({ ...form, tagIds })} />
-        </form>
-      </Modal>
+        canAdvanceFromStep={(step) => (step === 0 ? Boolean(form.title.trim()) : true)}
+        footer={<Button onClick={createDeal}>Create deal</Button>}
+        steps={[
+          {
+            id: 'deal',
+            label: 'Deal',
+            content: (
+              <div className="space-y-4">
+                <Input
+                  label="Deal title"
+                  required
+                  autoFocus
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+                <Input
+                  label={`Value (${preferences.currency})`}
+                  type="number"
+                  min={0}
+                  required
+                  value={form.value || ''}
+                  onChange={(e) => setForm({ ...form, value: Number(e.target.value) || 0 })}
+                />
+                <Select
+                  label="Stage"
+                  value={form.stage}
+                  onChange={(e) => setForm({ ...form, stage: e.target.value as DealStage })}
+                  options={boardStages.map((s) => ({ value: s.id, label: s.label }))}
+                />
+                <Input
+                  label="Expected close"
+                  type="date"
+                  required
+                  value={form.expectedClose}
+                  onChange={(e) => setForm({ ...form, expectedClose: e.target.value })}
+                />
+              </div>
+            ),
+          },
+          {
+            id: 'links',
+            label: 'Links',
+            content: (
+              <div className="space-y-4">
+                <Select
+                  label="Contact"
+                  value={form.contactId ?? ''}
+                  onChange={(e) => setForm({ ...form, contactId: e.target.value || null })}
+                  options={contactOptions}
+                />
+                <Select
+                  label="Company"
+                  value={form.companyId ?? ''}
+                  onChange={(e) => setForm({ ...form, companyId: e.target.value || null })}
+                  options={companyOptions}
+                />
+                <Select
+                  label="Owner"
+                  value={form.ownerId}
+                  onChange={(e) => setForm({ ...form, ownerId: e.target.value })}
+                  options={users.map((u) => ({ value: u.id, label: u.name }))}
+                />
+                <TagPicker value={form.tagIds} onChange={(tagIds) => setForm({ ...form, tagIds })} />
+              </div>
+            ),
+          },
+        ]}
+      />
 
       {drawerDeal && (
         <RecordDrawer

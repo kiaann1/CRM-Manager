@@ -1,6 +1,7 @@
 ﻿import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react'
 import { useEffect } from 'react'
 import { useToast } from '../../context/ToastContext'
+import { registerModalOpen } from '../../lib/modalPresence'
 import { lockDocumentScroll } from '../../lib/scrollLock'
 import { Button } from './Button'
 
@@ -57,7 +58,7 @@ export function Toaster() {
 
       {confirm && (
         <div
-          className="fixed inset-0 z-[110] flex min-h-0 items-end justify-center overflow-hidden overscroll-none px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:items-center sm:p-4"
+          className="fixed inset-0 z-[110] flex min-h-0 items-center justify-center overflow-hidden overscroll-none p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="confirm-title"
@@ -67,16 +68,16 @@ export function Toaster() {
             onClick={() => resolveConfirm(false)}
             aria-hidden
           />
-          <div className="relative mt-auto flex min-h-0 max-h-[min(92dvh,calc(100dvh-1rem))] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border border-border bg-surface shadow-xl sm:mt-0 sm:rounded-2xl">
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:p-6">
+          <div className="relative flex min-h-0 w-full max-w-[min(100vw-1.5rem,28rem)] max-h-[min(90dvh,calc(100dvh-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6 sm:py-6">
               <h2 id="confirm-title" className="text-lg font-semibold text-text">
                 {confirm.title}
               </h2>
               {confirm.message && (
-                <p className="mt-2 text-sm text-text-muted">{confirm.message}</p>
+                <p className="mt-3 text-sm leading-relaxed text-text-muted">{confirm.message}</p>
               )}
             </div>
-            <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-border px-4 py-4 sm:px-6 sm:py-4">
               <Button variant="secondary" onClick={() => resolveConfirm(false)}>
                 {confirm.cancelLabel ?? 'Cancel'}
               </Button>

@@ -78,8 +78,11 @@ export function ContactsPage() {
     setModalOpen(true)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const saveContact = () => {
+    if (!form.firstName.trim() || !form.email.trim()) {
+      toast.error('First name and email are required')
+      return
+    }
     if (editing) {
       updateContact(editing.id, form)
       toast.success('Contact updated')
@@ -209,63 +212,73 @@ export function ContactsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? 'Edit contact' : 'New contact'}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="contact-form">
-              {editing ? 'Save' : 'Create'}
-            </Button>
-          </>
+        canAdvanceFromStep={(step) =>
+          step === 0 ? Boolean(form.firstName.trim() && form.email.trim()) : true
         }
-      >
-        <form id="contact-form" className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="First name"
-              required
-              value={form.firstName}
-              onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-            />
-            <Input
-              label="Last name"
-              required
-              value={form.lastName}
-              onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-            />
-          </div>
-          <Input
-            label="Email"
-            type="email"
-            required
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-          <Input
-            label="Phone"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          />
-          <Input
-            label="Job title"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-          />
-          <Select
-            label="Company"
-            value={form.companyId ?? ''}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                companyId: e.target.value || null,
-              })
-            }
-            options={companyOptions}
-          />
-          <TagPicker value={form.tagIds} onChange={(tagIds) => setForm({ ...form, tagIds })} />
-        </form>
-      </Modal>
+        footer={<Button onClick={saveContact}>{editing ? 'Save' : 'Create'}</Button>}
+        steps={[
+          {
+            id: 'identity',
+            label: 'Identity',
+            content: (
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="First name"
+                    required
+                    autoFocus
+                    value={form.firstName}
+                    onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                  />
+                  <Input
+                    label="Last name"
+                    required
+                    value={form.lastName}
+                    onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                  />
+                </div>
+                <Input
+                  label="Email"
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                />
+                <Input
+                  label="Phone"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                />
+                <Input
+                  label="Job title"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              </div>
+            ),
+          },
+          {
+            id: 'company',
+            label: 'Company & tags',
+            content: (
+              <div className="space-y-4">
+                <Select
+                  label="Company"
+                  value={form.companyId ?? ''}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      companyId: e.target.value || null,
+                    })
+                  }
+                  options={companyOptions}
+                />
+                <TagPicker value={form.tagIds} onChange={(tagIds) => setForm({ ...form, tagIds })} />
+              </div>
+            ),
+          },
+        ]}
+      />
       <Modal
         open={mergeOpen}
         onClose={() => setMergeOpen(false)}

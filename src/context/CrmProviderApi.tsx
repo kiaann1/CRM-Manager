@@ -41,7 +41,8 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     ;(async () => {
       try {
-        await api.refresh().catch(() => undefined)
+        // Load workspace first; `api` retries with POST /api/auth/refresh on 401 for /api/v1/*.
+        // Avoid a separate proactive refresh — it always 401s when logged out and clutters the network tab.
         await reload()
       } catch (e) {
         if (!(e instanceof ApiError && e.status === 401)) {

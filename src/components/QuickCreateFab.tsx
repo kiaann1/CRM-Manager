@@ -1,7 +1,8 @@
 import { Handshake, Plus, UserPlus, ListTodo } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useCrm } from '../context/CrmContext'
+import { useAnyModalOpen } from '../lib/modalPresence'
 import { useToast } from '../context/ToastContext'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
@@ -13,11 +14,14 @@ export function QuickCreateFab() {
   const crm = useCrm()
   const toast = useToast()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [kind, setKind] = useState<QuickKind>(null)
   const [title, setTitle] = useState('')
   const [email, setEmail] = useState('')
+  const anyModalOpen = useAnyModalOpen()
+  const hideFab = anyModalOpen || pathname === '/products'
 
   const ownerId = crm.currentUser?.id ?? crm.users[0]?.id ?? ''
 
@@ -95,6 +99,7 @@ export function QuickCreateFab() {
 
   return (
     <>
+      {!hideFab && (
       <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-40 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
         {menuOpen && (
           <div className="rounded-xl border border-border bg-surface p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
@@ -130,6 +135,7 @@ export function QuickCreateFab() {
           <Plus size={24} className={menuOpen ? 'rotate-45 transition' : 'transition'} />
         </button>
       </div>
+      )}
 
       <Modal
         open={open}
@@ -137,8 +143,18 @@ export function QuickCreateFab() {
         title={
           kind === 'contact' ? 'New contact' : kind === 'deal' ? 'New deal' : 'New task'
         }
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="quick-create-form">
+              Create
+            </Button>
+          </>
+        }
       >
-        <form className="space-y-4" onSubmit={submit}>
+        <form id="quick-create-form" className="space-y-4" onSubmit={submit}>
           <Input
             label={kind === 'contact' ? 'Name' : 'Title'}
             value={title}
@@ -155,12 +171,6 @@ export function QuickCreateFab() {
               required
             />
           )}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Create</Button>
-          </div>
         </form>
       </Modal>
     </>

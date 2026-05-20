@@ -89,7 +89,10 @@ If sign-in works but you see **“Signed in but workspace failed to load”** an
    - From the **repo root** (`CRM-Manager/`): `npm run db:push --prefix server`
    - If you are **already in** `server/`, run **`npm run db:push` only** — do not add `--prefix server` (npm would look for `server/server/package.json` and fail with `ENOENT`).
 
-2. **Or** open `server/prisma/fix-bootstrap-columns.sql` in the Neon (or psql) SQL editor and run it, then restart the API.
+2. **Or** apply the bootstrap column patch without TCP 5432:
+   - Neon **SQL editor:** paste and run `server/prisma/fix-bootstrap-columns.sql`, or
+   - From **`server/`:** `npm run db:fix:bootstrap` (same SQL over Neon HTTPS; safe to re-run).
+   Then restart the API.
 
 After that, sign in again.
 
@@ -102,7 +105,10 @@ Try, in order:
 1. **Neon project awake** — In the [Neon console](https://console.neon.tech), open the project and branch. A suspended compute wakes on dashboard use; copy a **fresh** `DATABASE_URL` into `server/.env` if the project was recreated or rotated.
 2. **Network** — Corporate or school Wi‑Fi often blocks outbound **5432**. Try another network (e.g. phone hotspot) or VPN off/on.
 3. **Connection string** — Prefer Neon’s **direct** (non-pooled) URL for local Prisma when troubleshooting; ensure the URL includes SSL (e.g. `?sslmode=require`) if Neon’s copy button didn’t add it.
-4. **No TCP at all** — You can still fix **missing bootstrap columns** by running `server/prisma/fix-bootstrap-columns.sql` in Neon’s **SQL editor** (HTTPS in the browser), then restart the API.
+4. **No TCP at all** — Fix **missing bootstrap columns** without port 5432:
+   - **Browser:** run `server/prisma/fix-bootstrap-columns.sql` in Neon’s **SQL editor**, or
+   - **Terminal (from `server/`):** `npm run db:fix:bootstrap` (applies that file over Neon HTTPS; does not wipe data).
+   Then restart the API.
 
 **Avoid** `npm run db:push:neon` / `db:setup:neon` on a database you care about: the Neon HTTP helper script **drops and recreates `public` by default** (fresh schema only). Use normal `db:push` over TCP once connectivity works.
 

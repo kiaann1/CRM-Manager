@@ -276,8 +276,23 @@ export function InboxPage() {
         </p>
       )}
 
-      <Modal open={composeOpen} onClose={() => setComposeOpen(false)} title="New message">
-        <form className="space-y-4" onSubmit={(e) => void handleSend(e)}>
+      <Modal
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        title="New message"
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setComposeOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="inbox-compose-form" disabled={sending}>
+              <Send size={16} className="mr-1 inline" />
+              {sending ? 'Sending…' : 'Send'}
+            </Button>
+          </>
+        }
+      >
+        <form id="inbox-compose-form" className="space-y-4" onSubmit={(e) => void handleSend(e)}>
           <div className="flex gap-2">
             <button
               type="button"
@@ -332,15 +347,6 @@ export function InboxPage() {
             rows={6}
             required
           />
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setComposeOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={sending}>
-              <Send size={16} className="mr-1 inline" />
-              {sending ? 'Sending…' : 'Send'}
-            </Button>
-          </div>
         </form>
       </Modal>
     </PageFrame>

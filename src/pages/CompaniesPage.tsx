@@ -97,8 +97,7 @@ export function CompaniesPage() {
     setModalOpen(true)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const saveCompany = () => {
     if (!form.name.trim()) return
     const payload = { ...form, name: form.name.trim() }
     if (editing) {
@@ -228,124 +227,132 @@ export function CompaniesPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? 'Edit company' : 'Add company'}
+        canAdvanceFromStep={(step) => (step === 0 ? Boolean(form.name.trim()) : true)}
         footer={
-          <>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="company-form" disabled={!form.name.trim()}>
-              {editing ? 'Save changes' : 'Create company'}
-            </Button>
-          </>
+          <Button onClick={saveCompany} disabled={!form.name.trim()}>
+            {editing ? 'Save changes' : 'Create company'}
+          </Button>
         }
-      >
-        <form id="company-form" className="space-y-6" onSubmit={handleSubmit}>
-          <fieldset className="space-y-4">
-            <legend className="text-sm font-semibold text-text">Company details</legend>
-            <p className="text-xs text-text-muted -mt-2">
-              Start with the company name — you can add contacts after saving.
-            </p>
-            <Input
-              label="Company name"
-              required
-              autoFocus
-              placeholder="Acme Corporation"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-text">Industry</span>
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {INDUSTRIES.map((ind) => (
-                  <button
-                    key={ind}
-                    type="button"
-                    onClick={() => setForm({ ...form, industry: ind })}
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                      form.industry === ind
-                        ? 'bg-brand-600 text-white'
-                        : 'bg-surface-muted text-text-muted hover:text-text'
-                    }`}
-                  >
-                    {ind}
-                  </button>
-                ))}
-              </div>
-              <input
-                className="form-control"
-                placeholder="Or type a custom industry"
-                value={form.industry}
-                onChange={(e) => setForm({ ...form, industry: e.target.value })}
-                list="industry-list"
-              />
-              <datalist id="industry-list">
-                {INDUSTRIES.map((ind) => (
-                  <option key={ind} value={ind} />
-                ))}
-              </datalist>
-            </label>
-          </fieldset>
-
-          <fieldset className="space-y-4 border-t border-border pt-4">
-            <legend className="text-sm font-semibold text-text">Contact info</legend>
-            <Input
-              label="Website"
-              type="url"
-              placeholder="https://example.com"
-              value={form.website}
-              onChange={(e) => setForm({ ...form, website: e.target.value })}
-            />
-            <Input
-              label="Phone"
-              type="tel"
-              placeholder="+1 555 0100"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            />
-          </fieldset>
-
-          <fieldset className="space-y-4 border-t border-border pt-4">
-            <legend className="text-sm font-semibold text-text">Ownership</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Select
-                label="Account owner"
-                value={form.ownerId}
-                onChange={(e) => setForm({ ...form, ownerId: e.target.value })}
-                options={ownerOptions}
-              />
-              <Select
-                label="Territory"
-                value={form.territoryId ?? ''}
-                onChange={(e) =>
-                  setForm({ ...form, territoryId: e.target.value || null })
-                }
-                options={territoryOptions}
-              />
-            </div>
-            <Select
-              label="Parent company"
-              value={form.parentId ?? ''}
-              onChange={(e) => setForm({ ...form, parentId: e.target.value || null })}
-              options={parentOptions}
-            />
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-text">
-                Account health score: {form.healthScore}%
-              </span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={form.healthScore}
-                onChange={(e) =>
-                  setForm({ ...form, healthScore: Number(e.target.value) })
-                }
-                className="w-full accent-brand-600"
-              />
-            </label>
-          </fieldset>
-        </form>
-      </Modal>
+        steps={[
+          {
+            id: 'details',
+            label: 'Details',
+            content: (
+              <fieldset className="space-y-4">
+                <p className="text-xs text-text-muted">
+                  Start with the company name — you can add contacts after saving.
+                </p>
+                <Input
+                  label="Company name"
+                  required
+                  autoFocus
+                  placeholder="Acme Corporation"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-text">Industry</span>
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {INDUSTRIES.map((ind) => (
+                      <button
+                        key={ind}
+                        type="button"
+                        onClick={() => setForm({ ...form, industry: ind })}
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                          form.industry === ind
+                            ? 'bg-brand-600 text-white'
+                            : 'bg-surface-muted text-text-muted hover:text-text'
+                        }`}
+                      >
+                        {ind}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    className="form-control"
+                    placeholder="Or type a custom industry"
+                    value={form.industry}
+                    onChange={(e) => setForm({ ...form, industry: e.target.value })}
+                    list="industry-list"
+                  />
+                  <datalist id="industry-list">
+                    {INDUSTRIES.map((ind) => (
+                      <option key={ind} value={ind} />
+                    ))}
+                  </datalist>
+                </label>
+              </fieldset>
+            ),
+          },
+          {
+            id: 'contact',
+            label: 'Contact',
+            content: (
+              <fieldset className="space-y-4">
+                <Input
+                  label="Website"
+                  type="url"
+                  placeholder="https://example.com"
+                  value={form.website}
+                  onChange={(e) => setForm({ ...form, website: e.target.value })}
+                />
+                <Input
+                  label="Phone"
+                  type="tel"
+                  placeholder="+1 555 0100"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                />
+              </fieldset>
+            ),
+          },
+          {
+            id: 'ownership',
+            label: 'Ownership',
+            content: (
+              <fieldset className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label="Account owner"
+                    value={form.ownerId}
+                    onChange={(e) => setForm({ ...form, ownerId: e.target.value })}
+                    options={ownerOptions}
+                  />
+                  <Select
+                    label="Territory"
+                    value={form.territoryId ?? ''}
+                    onChange={(e) =>
+                      setForm({ ...form, territoryId: e.target.value || null })
+                    }
+                    options={territoryOptions}
+                  />
+                </div>
+                <Select
+                  label="Parent company"
+                  value={form.parentId ?? ''}
+                  onChange={(e) => setForm({ ...form, parentId: e.target.value || null })}
+                  options={parentOptions}
+                />
+                <label className="block space-y-2">
+                  <span className="text-sm font-medium text-text">
+                    Account health score: {form.healthScore}%
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={form.healthScore}
+                    onChange={(e) =>
+                      setForm({ ...form, healthScore: Number(e.target.value) })
+                    }
+                    className="w-full accent-brand-600"
+                  />
+                </label>
+              </fieldset>
+            ),
+          },
+        ]}
+      />
 
       {drawerCompany && (
         <RecordDrawer

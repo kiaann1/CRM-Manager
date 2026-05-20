@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { PageFrame } from '../components/layout/PageFrame'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
+import { ImageUploadField } from '../components/ui/ImageUploadField'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Select } from '../components/ui/Select'
@@ -311,133 +312,161 @@ export function ProductsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? 'Edit product' : 'New product'}
-        panelClassName="max-w-2xl"
-      >
-        <div className="max-h-[min(85vh,40rem)] space-y-5 overflow-y-auto pr-1">
-          <div className="space-y-3 border-b border-border pb-4 dark:border-slate-700">
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Core</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              <Input label="SKU" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
-              <Select
-                label="Status"
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value as Product['status'] })}
-                options={[
-                  { value: 'active', label: 'Active' },
-                  { value: 'discontinued', label: 'Discontinued' },
-                ]}
-              />
-              <Input
-                label="Category"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                placeholder="e.g. Subscriptions"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-3 border-b border-border pb-4 dark:border-slate-700">
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Pricing & inventory</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Input
-                label="List price"
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: Number(e.target.value) || 0 })}
-              />
-              <Input
-                label="Unit cost (internal)"
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.cost === null || form.cost === undefined ? '' : form.cost}
-                onChange={(e) => {
-                  const v = e.target.value
-                  setForm({ ...form, cost: v === '' ? null : Number(v) || 0 })
-                }}
-                placeholder="Optional"
-              />
-              <Input
-                label="Unit of measure"
-                value={form.unitOfMeasure}
-                onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}
-                placeholder="ea, seat, kg…"
-              />
-              <Input
-                label="Barcode / GTIN"
-                value={form.barcode}
-                onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-3 border-b border-border pb-4 dark:border-slate-700">
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Merchandising</p>
-            <Input
-              label="Image URL"
-              value={form.imageUrl}
-              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-              placeholder="https://…"
-            />
-            <Textarea
-              label="Description"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              rows={4}
-              placeholder="Long description for proposals, PDP, or storefront…"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Specifications</p>
-              <Button type="button" variant="secondary" className="!py-1.5 !text-xs" onClick={addSpecRow}>
-                <Plus size={14} /> Add row
-              </Button>
-            </div>
-            <p className="text-xs text-text-muted">Attribute rows (e.g. Weight, Material) appear on the public JSON for active items.</p>
-            <div className="space-y-2">
-              {form.specifications.length === 0 ? (
-                <p className="text-sm text-text-muted">No spec rows yet.</p>
-              ) : (
-                form.specifications.map((row, i) => (
-                  <div key={i} className="flex flex-wrap gap-2 sm:flex-nowrap">
-                    <Input
-                      label="Attribute"
-                      className="min-w-[8rem] flex-1"
-                      value={row.name}
-                      onChange={(e) => setSpec(i, 'name', e.target.value)}
-                      placeholder="e.g. Weight"
-                    />
-                    <Input
-                      label="Value"
-                      className="min-w-[8rem] flex-1"
-                      value={row.value}
-                      onChange={(e) => setSpec(i, 'value', e.target.value)}
-                      placeholder="e.g. 1.2 kg"
-                    />
-                    <div className="flex items-end">
-                      <Button type="button" variant="ghost" className="!p-2 text-rose-600" onClick={() => removeSpecRow(i)} aria-label="Remove row">
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 border-t border-border pt-4 dark:border-slate-700">
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={save}>Save product</Button>
-          </div>
-        </div>
-      </Modal>
+        size="lg"
+        canAdvanceFromStep={(step) => {
+          if (step === 0) return Boolean(form.name.trim() && form.sku.trim())
+          return true
+        }}
+        footer={
+          <Button onClick={save}>{editing ? 'Save product' : 'Create product'}</Button>
+        }
+        steps={[
+          {
+            id: 'core',
+            label: 'Core',
+            content: (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <Input label="SKU" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
+                <Select
+                  label="Status"
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value as Product['status'] })}
+                  options={[
+                    { value: 'active', label: 'Active' },
+                    { value: 'discontinued', label: 'Discontinued' },
+                  ]}
+                />
+                <Input
+                  label="Category"
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  placeholder="e.g. Subscriptions"
+                />
+              </div>
+            ),
+          },
+          {
+            id: 'pricing',
+            label: 'Pricing',
+            content: (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input
+                  label="List price"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: Number(e.target.value) || 0 })}
+                />
+                <Input
+                  label="Unit cost (internal)"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={form.cost === null || form.cost === undefined ? '' : form.cost}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setForm({ ...form, cost: v === '' ? null : Number(v) || 0 })
+                  }}
+                  placeholder="Optional"
+                />
+                <Input
+                  label="Unit of measure"
+                  value={form.unitOfMeasure}
+                  onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}
+                  placeholder="ea, seat, kg…"
+                />
+                <Input
+                  label="Barcode / GTIN"
+                  value={form.barcode}
+                  onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                />
+              </div>
+            ),
+          },
+          {
+            id: 'merchandising',
+            label: 'Merchandising',
+            content: (
+              <div className="space-y-5">
+                <ImageUploadField
+                  value={form.imageUrl}
+                  onChange={(imageUrl) => setForm({ ...form, imageUrl })}
+                  onError={(msg) => toast.error(msg)}
+                />
+                <Textarea
+                  label="Description"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={5}
+                  placeholder="Long description for proposals, PDP, or storefront…"
+                />
+              </div>
+            ),
+          },
+          {
+            id: 'specs',
+            label: 'Specifications',
+            content: (
+              <div className="space-y-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm leading-relaxed text-text-muted">
+                    Attribute rows appear on the public JSON for active items.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="shrink-0 self-start sm:self-center"
+                    onClick={addSpecRow}
+                  >
+                    <Plus size={16} className="mr-1 inline" />
+                    Add row
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  {form.specifications.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-text-muted">
+                      No spec rows yet. Use Add row to define weight, dimensions, and other attributes.
+                    </p>
+                  ) : (
+                    form.specifications.map((row, i) => (
+                      <div
+                        key={i}
+                        className="grid gap-3 rounded-xl border border-border bg-surface-muted/30 p-3 dark:border-slate-700 dark:bg-slate-900/30 sm:grid-cols-[1fr_1fr_auto] sm:items-center"
+                      >
+                        <Input
+                          label="Attribute"
+                          value={row.name}
+                          onChange={(e) => setSpec(i, 'name', e.target.value)}
+                          placeholder="e.g. Weight"
+                        />
+                        <Input
+                          label="Value"
+                          value={row.value}
+                          onChange={(e) => setSpec(i, 'value', e.target.value)}
+                          placeholder="e.g. 1.2 kg"
+                        />
+                        <div className="flex items-center justify-center">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="!p-2 text-rose-600"
+                            onClick={() => removeSpecRow(i)}
+                            aria-label="Remove row"
+                          >
+                            <Trash2 size={18} />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ),
+          },
+        ]}
+      />
     </PageFrame>
   )
 }
