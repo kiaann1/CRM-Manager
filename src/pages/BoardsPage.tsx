@@ -1,12 +1,14 @@
-import { Columns, LayoutGrid, Calendar, GanttChart, Plus } from 'lucide-react'
+import { Columns, LayoutGrid, Calendar, GanttChart, Plus, LayoutTemplate } from 'lucide-react'
 import { useState, type DragEvent } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
+import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { formatDate } from '../lib/format'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
+import { EmptyState } from '../components/ui/EmptyState'
 
 type BoardView = 'board' | 'table' | 'calendar' | 'timeline'
 
@@ -71,11 +73,11 @@ export function BoardsPage() {
   }
 
   return (
-    <div>
-      <PageHeader
-        title="Boards"
-        description="Custom workspaces — drag cards between columns"
-        actions={
+    <PageFrame
+      title="Boards"
+      description="Custom workspaces — drag cards between columns"
+      accent="violet"
+      actions={
           <>
             <select
               className="rounded-lg border border-border px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
@@ -106,35 +108,44 @@ export function BoardsPage() {
             </Button>
           </>
         }
-      />
-      <div className="flex gap-2 border-b border-border px-8 dark:border-slate-700">
-        {views.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            onClick={() => setView(v.id)}
-            className={`flex items-center gap-2 px-3 py-3 text-sm font-medium ${view === v.id ? 'border-b-2 border-brand-600 text-brand-600' : 'text-text-muted'}`}
-          >
-            <v.icon size={16} /> {v.label}
-          </button>
-        ))}
-      </div>
-      <div className="page-shell">
+      toolbar={
+        <SegmentedControl
+          value={view}
+          onChange={setView}
+          options={views.map((v) => ({ value: v.id, label: v.label }))}
+        />
+      }
+    >
         {boards.length === 0 ? (
-          <p className="text-sm text-text-muted">No boards in this workspace yet.</p>
+          <EmptyState
+            icon={LayoutTemplate}
+            title="No boards yet"
+            description="Create a workspace board to track onboarding, launches, or custom workflows."
+            action={
+              <Button onClick={() => setBoardModalOpen(true)}>
+                <Plus size={16} /> New board
+              </Button>
+            }
+          />
         ) : view === 'board' ? (
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div
+            className="kanban-board overflow-x-auto"
+            style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(16rem, 1fr))` }}
+          >
             {columns.map((col) => (
               <div
                 key={col.id}
-                className="w-72 shrink-0 panel bg-surface-muted/40"
+                className="kanban-column"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => onDrop(e, col.id)}
               >
-                <p className="border-b border-border px-4 py-3 font-semibold dark:border-slate-700">
-                  {col.title}
-                </p>
-                <ul className="min-h-[4rem] space-y-2 p-3">
+                <header className="kanban-column__head">
+                  <span className="font-semibold">{col.title}</span>
+                  <span className="text-xs text-text-muted">
+                    {items.filter((i) => i.columnId === col.id).length}
+                  </span>
+                </header>
+                <ul className="kanban-column__body">
                   {items
                     .filter((i) => i.columnId === col.id)
                     .map((item) => (
@@ -213,7 +224,6 @@ export function BoardsPage() {
             ))}
           </div>
         )}
-      </div>
 
       <Modal open={boardModalOpen} onClose={() => setBoardModalOpen(false)} title="New board">
         <form
@@ -264,6 +274,6 @@ export function BoardsPage() {
           <Button type="submit">Add</Button>
         </form>
       </Modal>
-    </div>
+    </PageFrame>
   )
 }

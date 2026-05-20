@@ -2,7 +2,8 @@ import { GripVertical, Handshake, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useMemo, useState, type DragEvent } from 'react'
 import { DealInlineFields } from '../components/deals/DealInlineFields'
 import { DealTableRow } from '../components/deals/DealTableRow'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
+import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Input } from '../components/ui/Input'
@@ -19,6 +20,7 @@ import { TagPicker } from '../components/TagPicker'
 import { ListFilterBar } from '../components/ListFilterBar'
 import { useListFilters } from '../hooks/useListFilters'
 import { PIPE_DEFAULT } from '../lib/ids'
+import { badgeClass } from '../lib/theme'
 
 type DealForm = Omit<Deal, 'id' | 'createdAt'>
 
@@ -140,43 +142,12 @@ export function DealsPage() {
   ]
 
   return (
-    <div className="flex min-h-0 flex-col">
-      <PageHeader
-        title="Deals"
-        description="Drag between stages or edit fields inline — no pop-up needed"
-        actions={
-          <>
-            <div className="flex rounded-lg border border-border bg-surface p-0.5">
-              <button
-                type="button"
-                onClick={() => setView('board')}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                  view === 'board' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300' : 'text-text-muted'
-                }`}
-              >
-                Board
-              </button>
-              <button
-                type="button"
-                onClick={() => setView('table')}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                  view === 'table' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300' : 'text-text-muted'
-                }`}
-              >
-                Table
-              </button>
-            </div>
-            <ImportExportBar entity="deals" />
-            <Button onClick={openCreate}>
-              <Plus size={16} />
-              Add deal
-            </Button>
-          </>
-        }
-      />
-
-      {deals.length > 0 && (
-        <div className="px-8 pt-4">
+    <PageFrame
+      title="Deals"
+      description="Drag between stages or edit fields inline — no pop-up needed"
+      accent="brand"
+      toolbar={
+        deals.length > 0 ? (
           <ListFilterBar
             query={filters.query}
             onQueryChange={filters.setQuery}
@@ -188,11 +159,28 @@ export function DealsPage() {
             onApply={filters.apply}
             onRemove={filters.remove}
           />
-        </div>
-      )}
-
+        ) : undefined
+      }
+      bodyClassName={view === 'board' && deals.length > 0 ? '!px-2 sm:!px-4' : ''}
+      actions={
+        <>
+          <SegmentedControl
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'board', label: 'Board' },
+              { value: 'table', label: 'Table' },
+            ]}
+          />
+          <ImportExportBar entity="deals" />
+          <Button onClick={openCreate}>
+            <Plus size={16} />
+            Add deal
+          </Button>
+        </>
+      }
+    >
       {deals.length === 0 ? (
-        <div className="page-shell">
           <EmptyState
             icon={Handshake}
             title="No deals yet"
@@ -204,28 +192,23 @@ export function DealsPage() {
               </Button>
             }
           />
-        </div>
       ) : view === 'board' ? (
-        <div className="grid w-full grid-cols-2 gap-2 px-3 pb-4 sm:px-4 md:grid-cols-3 xl:grid-cols-6">
+        <div className="kanban-board w-full grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
           {boardStages.map((stage) => {
             const columnDeals = filteredDeals.filter((d) => d.stage === stage.id)
             const columnTotal = columnDeals.reduce((s, d) => s + d.value, 0)
             return (
               <section
                 key={stage.id}
-                className={`flex min-w-0 flex-col rounded-xl border bg-surface-muted transition-colors ${
-                  dropTarget === stage.id
-                    ? 'border-brand-500 ring-2 ring-brand-500/30'
-                    : 'border-border'
-                }`}
+                className={`kanban-column ${dropTarget === stage.id ? 'kanban-column--drop' : ''}`}
                 onDragOver={(e) => onDragOverColumn(e, stage.id)}
                 onDragLeave={() => setDropTarget(null)}
                 onDrop={(e) => onDropColumn(e, stage.id)}
               >
-                <header className="border-b border-border px-2 py-2 sm:px-3">
+                <header className="kanban-column__head">
                   <div className="flex items-center justify-between gap-1">
                     <span
-                      className={`truncate rounded-full px-2 py-0.5 text-[10px] font-semibold sm:text-xs ${stage.color}`}
+                      className={`truncate rounded-full px-2 py-0.5 text-[10px] font-semibold sm:text-xs ${badgeClass(stage.color)}`}
                     >
                       {stage.label}
                     </span>
@@ -235,7 +218,7 @@ export function DealsPage() {
                     {formatCurrency(columnTotal)}
                   </p>
                 </header>
-                <ul className="flex flex-col gap-1.5 p-2">
+                <ul className="kanban-column__body">
                   {columnDeals.length === 0 && (
                     <li className="rounded-lg border border-dashed border-border py-6 text-center text-[10px] text-text-muted sm:text-xs">
                       Drop here
@@ -414,6 +397,6 @@ export function DealsPage() {
           onClose={() => setDrawerDealId(null)}
         />
       )}
-    </div>
+    </PageFrame>
   )
 }

@@ -1,6 +1,6 @@
 import { FileText, Plus, Trash2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useCrm } from '../context/CrmContext'
@@ -15,20 +15,18 @@ export function DocumentsPage() {
   const navigate = useNavigate()
 
   return (
-    <>
-      <PageHeader
-        title="Docs"
-        description="Wiki-style documents linked to CRM records"
-        actions={
-          <Button onClick={() => navigate('/docs/new')}>
-            <Plus size={16} className="mr-1 inline" />
-            New doc
-          </Button>
-        }
-      />
-
+    <PageFrame
+      title="Docs"
+      description="Wiki-style documents linked to CRM records"
+      accent="violet"
+      actions={
+        <Button onClick={() => navigate('/docs/new')}>
+          <Plus size={16} className="mr-1 inline" />
+          New doc
+        </Button>
+      }
+    >
       {documents.length === 0 ? (
-        <div className="page-shell">
           <EmptyState
             icon={FileText}
             title="No documents yet"
@@ -40,9 +38,8 @@ export function DocumentsPage() {
               </Button>
             }
           />
-        </div>
       ) : (
-        <ul className="page-shell grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="page-card-grid">
           {documents.map((d) => {
             const preview = stripHtml(d.content) || 'No content yet.'
             return (
@@ -79,6 +76,6 @@ export function DocumentsPage() {
           })}
         </ul>
       )}
-    </>
+    </PageFrame>
   )
 }

@@ -1,4 +1,4 @@
-import type { CrmState, InboxMessage } from '../../types'
+import type { CrmState, InboxMessage, Product, ProductSpecification } from '../../types'
 
 /** Empty string = same-origin (Vite proxy to API in dev) */
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
@@ -74,7 +74,20 @@ export const api = {
       user: { id: string; email: string; name: string }
       organizationId: string
       role: string
+      hasPassword?: boolean
     }>('/api/auth/me'),
+
+  updateProfile: (data: { name: string }) =>
+    request<{ user: { id: string; email: string; name: string } }>('/api/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    request<{ ok: boolean }>('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
   bootstrap: () => request<CrmState>('/api/v1/bootstrap'),
 
@@ -114,6 +127,9 @@ export const api = {
   updateLead: (id: string, data: unknown) =>
     request(`/api/v1/leads/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
+  convertLead: (id: string) =>
+    request<{ contact: { id: string } }>(`/api/v1/leads/${id}/convert`, { method: 'POST' }),
+
   createDeal: (data: unknown) =>
     request('/api/v1/deals', { method: 'POST', body: JSON.stringify(data) }),
 
@@ -146,6 +162,9 @@ export const api = {
 
   deleteGoal: (id: string) =>
     request(`/api/v1/goals/${id}`, { method: 'DELETE' }),
+
+  createSprint: (data: unknown) =>
+    request('/api/v1/sprints', { method: 'POST', body: JSON.stringify(data) }),
 
   createDocument: (data: unknown) =>
     request('/api/v1/documents', { method: 'POST', body: JSON.stringify(data) }),
@@ -251,14 +270,45 @@ export const api = {
   markAllNotificationsRead: () =>
     request<{ updated: number }>('/api/v1/notifications/read-all', { method: 'POST' }),
 
-  createProduct: (data: { name: string; sku: string; price: number }) =>
-    request('/api/v1/products', { method: 'POST', body: JSON.stringify(data) }),
+  createProduct: (data: {
+    name: string
+    sku: string
+    price: number
+    description?: string
+    category?: string
+    unitOfMeasure?: string
+    cost?: number | null
+    barcode?: string
+    imageUrl?: string
+    status?: 'active' | 'discontinued'
+    specifications?: ProductSpecification[]
+  }) => request<Product>('/api/v1/products', { method: 'POST', body: JSON.stringify(data) }),
 
-  updateProduct: (id: string, data: Partial<{ name: string; sku: string; price: number }>) =>
-    request(`/api/v1/products/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  updateProduct: (
+    id: string,
+    data: Partial<{
+      name: string
+      sku: string
+      price: number
+      description: string
+      category: string
+      unitOfMeasure: string
+      cost: number | null
+      barcode: string
+      imageUrl: string
+      status: 'active' | 'discontinued'
+      specifications: ProductSpecification[]
+    }>,
+  ) => request<Product>(`/api/v1/products/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
   deleteProduct: (id: string) =>
-    request(`/api/v1/products/${id}`, { method: 'DELETE' }),
+    request<void>(`/api/v1/products/${id}`, { method: 'DELETE' }),
+
+  createProductCatalogFeed: () =>
+    request<{ token: string; url: string }>('/api/v1/product-catalog-feed', { method: 'POST' }),
+
+  deleteProductCatalogFeed: () =>
+    request<void>('/api/v1/product-catalog-feed', { method: 'DELETE' }),
 
   createContract: (data: {
     dealId: string

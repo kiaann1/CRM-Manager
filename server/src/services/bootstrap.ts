@@ -4,7 +4,23 @@ import { ssoProviderEnabled } from '../config.js'
 import { INTEGRATION_CATALOG } from '../lib/integrations/catalog.js'
 import { maskConfig } from '../lib/integrations/mask.js'
 import { prisma } from '../lib/prisma.js'
+import { normalizeTheme } from '../lib/theme.js'
 import { ensureOrgIntegrations } from './ensureIntegrations.js'
+import { ensureOrgStarterContent } from './ensureStarterContent.js'
+
+function parseProductSpecifications(json: unknown): { name: string; value: string }[] {
+  if (!Array.isArray(json)) return []
+  return json
+    .map((row) => {
+      if (!row || typeof row !== 'object') return null
+      const o = row as Record<string, unknown>
+      const name = typeof o.name === 'string' ? o.name : ''
+      const value = typeof o.value === 'string' ? o.value : ''
+      if (!name.trim() && !value.trim()) return null
+      return { name: name.trim(), value: value.trim() }
+    })
+    .filter(Boolean) as { name: string; value: string }[]
+}
 
 /** Shape matches frontend `CrmState` for drop-in use */
 export async function buildBootstrap(orgId: string, userId: string) {
@@ -12,9 +28,16 @@ export async function buildBootstrap(orgId: string, userId: string) {
     console.warn('[bootstrap] Integrations seed skipped:', err)
   })
 
+  await ensureOrgStarterContent(orgId).catch((err) => {
+    console.warn('[bootstrap] Starter content skipped:', err)
+  })
+
   const membership = await prisma.membership.findUnique({
     where: { userId_organizationId: { userId, organizationId: orgId } },
-    include: { user: { include: { preferences: true } } },
+    include: {
+      user: { include: { preferences: true } },
+      organization: { select: { productCatalogToken: true } },
+    },
   })
   if (!membership) throw new Error('Not a member of this organization')
 
@@ -174,10 +197,11 @@ export async function buildBootstrap(orgId: string, userId: string) {
       loggedInAt: new Date().toISOString(),
     },
     preferences: {
-      theme: (prefs?.theme ?? 'system') as 'light' | 'dark' | 'system',
+      theme: normalizeTheme(prefs?.theme ?? 'light'),
       emailDigest: prefs?.emailDigest ?? true,
       pushEnabled: prefs?.pushEnabled ?? true,
     },
+    productCatalogToken: membership.organization.productCatalogToken ?? null,
     users: members.map((m) => ({
       id: m.user.id,
       name: m.user.name,
@@ -319,6 +343,16 @@ export async function buildBootstrap(orgId: string, userId: string) {
       name: p.name,
       sku: p.sku,
       price: p.price,
+      description: p.description,
+      category: p.category,
+      unitOfMeasure: p.unitOfMeasure,
+      cost: p.cost ?? null,
+      barcode: p.barcode,
+      imageUrl: p.imageUrl,
+      status: p.status as 'active' | 'discontinued',
+      specifications: parseProductSpecifications(p.specifications),
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
     })),
     quotes: quotes.map((q) => ({
       id: q.id,

@@ -1,25 +1,25 @@
 import type { ReactNode } from 'react'
+import type { PageAccent } from './pageAccent'
 
 interface PageHeaderProps {
   title: string
   description?: string
   actions?: ReactNode
+  accent?: PageAccent
 }
 
-export function PageHeader({ title, description, actions }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, accent = 'brand' }: PageHeaderProps) {
   return (
-    <header className="relative px-6 py-5 sm:px-8">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-500/40 to-transparent" aria-hidden />
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-text sm:text-[1.65rem]">
-            {title}
-          </h1>
-          {description && (
-            <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-text-muted">{description}</p>
-          )}
+    <header className={`page-hero page-hero--${accent}`}>
+      <div className="page-hero__glow" aria-hidden />
+      <div className="page-hero__inner">
+        <div className="min-w-0 flex-1 basis-full lg:basis-auto">
+          <h1 className="page-hero__title">{title}</h1>
+          {description && <p className="page-hero__desc">{description}</p>}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {actions && (
+          <div className="page-hero__actions w-full min-w-0 shrink-0 sm:w-auto">{actions}</div>
+        )}
       </div>
     </header>
   )

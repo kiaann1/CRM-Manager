@@ -134,3 +134,11 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Local API smoke-test artifacts
+scripts/smoke-cookies.txt
+scripts/bootstrap.json
+scripts/login-body.json
+scripts/profile-body.json
+cookies.txt
+bootstrap.json

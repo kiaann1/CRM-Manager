@@ -43,7 +43,7 @@ export function ListFilterBar({
       <div className="flex flex-wrap items-end gap-3">
         <Input
           label="Search"
-          className="min-w-[12rem] flex-1"
+          className="min-w-0 w-full flex-1 sm:min-w-[12rem]"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search…"
@@ -51,7 +51,7 @@ export function ListFilterBar({
         {stageOptions && onStageChange && (
           <Select
             label="Stage"
-            className="w-40"
+            className="w-full min-w-0 sm:w-40"
             value={stage ?? ''}
             onChange={(e) => onStageChange(e.target.value)}
             options={[{ value: '', label: 'All stages' }, ...stageOptions]}

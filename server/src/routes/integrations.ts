@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client'
 import { Router } from 'express'
 import { z } from 'zod'
 import { ssoProviderEnabled } from '../config.js'
@@ -98,7 +99,7 @@ integrationsRouter.patch('/:type', async (req: AuthRequest, res) => {
     where: { id: existing.id },
     data: {
       enabled: body.enabled ?? existing.enabled,
-      config: mergedConfig,
+      config: mergedConfig as Prisma.InputJsonValue,
     },
   })
 
@@ -130,7 +131,7 @@ integrationsRouter.post('/:type/test', async (req: AuthRequest, res) => {
 
   await prisma.integrationConnection.update({
     where: { id: existing.id },
-    data: { config: nextConfig },
+    data: { config: nextConfig as Prisma.InputJsonValue },
   })
 
   if (!result.ok) {
@@ -198,7 +199,7 @@ integrationsRouter.post('/:type/sync', async (req: AuthRequest, res) => {
   }
   await prisma.integrationConnection.update({
     where: { id: existing.id },
-    data: { config: nextConfig },
+    data: { config: nextConfig as Prisma.InputJsonValue },
   })
 
   res.json({

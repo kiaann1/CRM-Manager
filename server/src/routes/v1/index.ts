@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client'
 import { Router } from 'express'
 import { z } from 'zod'
 import { writeAudit } from '../../lib/audit.js'
@@ -7,6 +8,7 @@ import { requireAuth } from '../../middleware/auth.js'
 import { computeLeadScore } from '../../lib/lead-score.js'
 import { buildBootstrap } from '../../services/bootstrap.js'
 import { runDealStageAutomations } from '../../services/automations.js'
+import { emitCrmEvent } from '../../services/crmEvents.js'
 import { dispatchWebhooks } from '../../services/webhooks.js'
 import { createHash, randomBytes } from 'crypto'
 import { integrationsRouter } from '../integrations.js'
@@ -61,7 +63,12 @@ v1Router.post('/contacts', async (req: AuthRequest, res) => {
     },
   })
   await writeAudit(req.auth!.orgId, req.auth!.sub, 'contact.created', 'contact', contact.id)
-  await dispatchWebhooks(req.auth!.orgId, 'contact.created', { id: contact.id })
+  await emitCrmEvent(req.auth!.orgId, 'contact.created', {
+    id: contact.id,
+    email: contact.email,
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+  })
   res.status(201).json(contact)
 })
 
@@ -77,6 +84,7 @@ v1Router.patch('/contacts/:id', async (req: AuthRequest, res) => {
     },
   })
   await writeAudit(req.auth!.orgId, req.auth!.sub, 'contact.updated', 'contact', contact.id)
+  await emitCrmEvent(req.auth!.orgId, 'contact.updated', { id: contact.id })
   res.json(contact)
 })
 
@@ -124,7 +132,12 @@ v1Router.post('/deals', async (req: AuthRequest, res) => {
     },
   })
   await writeAudit(req.auth!.orgId, req.auth!.sub, 'deal.created', 'deal', deal.id)
-  await dispatchWebhooks(req.auth!.orgId, 'deal.created', { id: deal.id, stage: deal.stageKey })
+  await emitCrmEvent(req.auth!.orgId, 'deal.created', {
+    id: deal.id,
+    title: deal.title,
+    stage: deal.stageKey,
+    value: deal.value,
+  })
   res.status(201).json(deal)
 })
 
@@ -164,11 +177,20 @@ v1Router.patch('/deals/:id', async (req: AuthRequest, res) => {
     },
   })
   if (body.stageKey && body.stageKey !== existing.stageKey) {
-    await dispatchWebhooks(req.auth!.orgId, 'deal.stage_changed', {
+    const stagePayload = {
       id: deal.id,
+      title: deal.title,
       from: existing.stageKey,
       to: body.stageKey,
-    })
+      value: deal.value,
+    }
+    await emitCrmEvent(req.auth!.orgId, 'deal.stage_changed', stagePayload)
+    if (body.stageKey === 'won') {
+      await emitCrmEvent(req.auth!.orgId, 'deal.won', stagePayload)
+    }
+    if (body.stageKey === 'lost') {
+      await emitCrmEvent(req.auth!.orgId, 'deal.lost', stagePayload)
+    }
     await runDealStageAutomations(
       req.auth!.orgId,
       {
@@ -230,10 +252,21 @@ v1Router.delete('/companies/:id', async (req: AuthRequest, res) => {
 })
 
 v1Router.delete('/deals/:id', async (req: AuthRequest, res) => {
-  await prisma.deal.delete({
-    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  const id = param(req.params.id)
+  const existing = await prisma.deal.findFirst({
+    where: { id, organizationId: req.auth!.orgId },
   })
-  await writeAudit(req.auth!.orgId, req.auth!.sub, 'deal.deleted', 'deal', param(req.params.id))
+  if (!existing) {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  await prisma.deal.delete({ where: { id } })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'deal.deleted', 'deal', id)
+  await emitCrmEvent(req.auth!.orgId, 'deal.deleted', {
+    id,
+    title: existing.title,
+    stage: existing.stageKey,
+  })
   res.status(204).end()
 })
 
@@ -279,6 +312,14 @@ v1Router.post('/leads', async (req: AuthRequest, res) => {
     },
     include: { tags: true },
   })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'lead.created', 'lead', lead.id)
+  await emitCrmEvent(req.auth!.orgId, 'lead.created', {
+    id: lead.id,
+    email: lead.email,
+    firstName: lead.firstName,
+    lastName: lead.lastName,
+    stage: lead.stage,
+  })
   res.status(201).json({ ...lead, tagIds: lead.tags.map((t) => t.tagId) })
 })
 
@@ -304,6 +345,16 @@ v1Router.post('/leads/:id/convert', async (req: AuthRequest, res) => {
   await prisma.lead.update({
     where: { id: lead.id },
     data: { stage: 'converted', convertedContactId: contact.id, score: 100 },
+  })
+  await emitCrmEvent(req.auth!.orgId, 'contact.created', {
+    id: contact.id,
+    email: contact.email,
+    fromLeadId: lead.id,
+  })
+  await emitCrmEvent(req.auth!.orgId, 'lead.converted', {
+    leadId: lead.id,
+    contactId: contact.id,
+    email: lead.email,
   })
   res.json({ contact })
 })
@@ -522,6 +573,28 @@ v1Router.delete('/goals/:id', async (req: AuthRequest, res) => {
   res.status(204).end()
 })
 
+// ——— Sprints ———
+v1Router.post('/sprints', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      name: z.string().min(1),
+      start: z.string().min(1),
+      end: z.string().min(1),
+      teamId: z.string(),
+    })
+    .parse(req.body)
+  const sprint = await prisma.sprint.create({
+    data: {
+      organizationId: req.auth!.orgId,
+      name: body.name.trim(),
+      start: new Date(body.start),
+      end: new Date(body.end),
+      teamId: body.teamId,
+    },
+  })
+  res.status(201).json(sprint)
+})
+
 // ——— Documents ———
 v1Router.post('/documents', async (req: AuthRequest, res) => {
   const body = z
@@ -726,8 +799,8 @@ v1Router.post('/automations', async (req: AuthRequest, res) => {
       organizationId: req.auth!.orgId,
       name: body.name.trim(),
       enabled: body.enabled ?? true,
-      trigger: body.trigger,
-      actions: body.actions,
+      trigger: body.trigger as Prisma.InputJsonValue,
+      actions: body.actions as Prisma.InputJsonValue,
     },
   })
   res.status(201).json(rule)
@@ -850,7 +923,10 @@ v1Router.post('/leads/import', async (req: AuthRequest, res) => {
 v1Router.patch('/preferences', async (req: AuthRequest, res) => {
   const body = z
     .object({
-      theme: z.enum(['light', 'dark', 'system']).optional(),
+      theme: z
+        .enum(['light', 'dark', 'system'])
+        .optional()
+        .transform((t) => (t === undefined ? undefined : t === 'dark' ? 'dark' : 'light')),
       emailDigest: z.boolean().optional(),
       pushEnabled: z.boolean().optional(),
     })

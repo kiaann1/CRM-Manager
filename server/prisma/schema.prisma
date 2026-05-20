@@ -11,6 +11,8 @@ model Organization {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
+  /// Secret token for `GET /api/public/catalog/:token` (read-only product JSON for storefronts).
+  productCatalogToken String? @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -125,7 +127,7 @@ model RefreshToken {
 
 model UserPreference {
   userId       String  @id
-  theme        String  @default("system")
+  theme        String  @default("light")
   emailDigest  Boolean @default(true)
   pushEnabled  Boolean @default(true)
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -574,8 +576,22 @@ model Product {
   name           String
   sku            String
   price          Float
+  description    String @default("")
+  category       String @default("")
+  unitOfMeasure  String @default("ea")
+  cost           Float?
+  barcode        String @default("")
+  imageUrl       String @default("")
+  status         String @default("active")
+  /// JSON array of { name, value } rows for spec sheet / ERP attributes.
+  specifications Json   @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([organizationId, sku])
 }
 
 model Quote {

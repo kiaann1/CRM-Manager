@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { StatCard } from '../components/StatCard'
 import { useCrm } from '../context/CrmContext'
 import { formatCurrency } from '../lib/format'
@@ -43,11 +43,17 @@ export function ReportsPage() {
   const aiActions = getNextBestActions(crm, userId)
 
   return (
-    <div>
-      <PageHeader title="Reports" description="Funnel, forecasting, activity metrics, and AI next-best-actions" actions={
-        <Button variant="secondary" onClick={exportReport}><Download size={16} /> Export CSV</Button>
-      } />
-      <div className="page-shell space-y-8">
+    <PageFrame
+      title="Reports"
+      description="Funnel, forecasting, activity metrics, and AI next-best-actions"
+      accent="violet"
+      bodyClassName="space-y-8"
+      actions={
+        <Button variant="secondary" onClick={exportReport}>
+          <Download size={16} /> Export CSV
+        </Button>
+      }
+    >
         <section className="grid gap-4 sm:grid-cols-3">
           <StatCard label="Weighted forecast" value={formatCurrency(weighted)} icon={TrendingUp} />
           <StatCard label="Won YTD" value={formatCurrency(crm.deals.filter((d) => d.stage === 'won').reduce((s, d) => s + d.value, 0))} icon={BarChart3} />
@@ -56,6 +62,11 @@ export function ReportsPage() {
         <section className="panel panel-pad-lg">
           <h2 className="mb-4 font-semibold">Pipeline funnel</h2>
           <div className="space-y-3">
+            {crm.deals.length === 0 && (
+              <p className="text-sm text-text-muted">
+                No deals in the pipeline yet — add deals on the Deals page to populate this funnel.
+              </p>
+            )}
             {funnel.map((f) => (
               <div key={f.stage}>
                 <div className="mb-1 flex justify-between text-sm"><span>{f.stage}</span><span>{f.count} · {formatCurrency(f.value)}</span></div>
@@ -78,7 +89,6 @@ export function ReportsPage() {
           <h2 className="mb-2 font-semibold">Cohort / retention (post-sale)</h2>
           <p className="text-sm text-text-muted">Avg health score: {Math.round(crm.companies.reduce((s, c) => s + c.healthScore, 0) / Math.max(crm.companies.length, 1))} · NPS responses: {crm.surveys.length}</p>
         </section>
-      </div>
-    </div>
+    </PageFrame>
   )
 }

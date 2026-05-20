@@ -1,15 +1,19 @@
 import { Copy } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { api } from '../lib/api/client'
 import { formatDate } from '../lib/format'
+import { isNewPasswordValid } from '../lib/passwordPolicy'
 import { Button } from '../components/ui/Button'
 import { Select } from '../components/ui/Select'
 import { Input } from '../components/ui/Input'
+import { PasswordInput } from '../components/ui/PasswordInput'
 import { Textarea } from '../components/ui/Textarea'
+import { IntegrationHealthSummary } from '../components/settings/IntegrationHealthSummary'
+import { PasswordChangeChecklist } from '../components/settings/PasswordChangeChecklist'
 import { PipelineStageRow } from '../components/settings/PipelineStageRow'
 
 const tabs = [
@@ -28,9 +32,13 @@ const tabs = [
 
 const WEBHOOK_EVENTS = [
   'contact.created',
+  'contact.updated',
+  'lead.created',
+  'lead.converted',
   'deal.created',
   'deal.stage_changed',
-  'deal.updated',
+  'deal.won',
+  'deal.lost',
   'deal.deleted',
   'webhook.test',
 ]
@@ -69,6 +77,11 @@ export function SettingsPage() {
   const [inviteRole, setInviteRole] = useState('rep')
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null)
   const [newTagName, setNewTagName] = useState('')
+  const [profileName, setProfileName] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [hasPassword, setHasPassword] = useState(true)
+  const [savingProfile, setSavingProfile] = useState(false)
 
   const canManageTeam =
     crm.currentUser?.role === 'admin' || crm.currentUser?.role === 'manager'
@@ -102,6 +115,12 @@ export function SettingsPage() {
     api.listInvites().then(setInvites).catch(() => undefined)
   }, [tab, canManageTeam])
 
+  useEffect(() => {
+    if (tab !== 'Profile') return
+    setProfileName(crm.currentUser?.name ?? '')
+    api.me().then((m) => setHasPassword(m.hasPassword ?? true)).catch(() => undefined)
+  }, [tab, crm.currentUser?.name])
+
   const workspaceName = crm.workspaces[0]?.name ?? 'Workspace'
   const toggleWebhookEvent = (event: string) => {
     setWebhookEvents((prev) =>
@@ -110,12 +129,12 @@ export function SettingsPage() {
   }
 
   return (
-    <>
-      <PageHeader
-        title="Settings"
-        description="Profile, workspace, integrations, security, and data controls"
-      />
-      <section className="page-shell flex flex-col gap-6 lg:flex-row">
+    <PageFrame
+      title="Settings"
+      description="Profile, workspace, integrations, security, and data controls"
+      accent="brand"
+    >
+      <section className="flex flex-col gap-6 lg:flex-row">
         <nav className="flex shrink-0 flex-wrap gap-1 lg:w-44 lg:flex-col">
           {tabs.map((t) => (
             <button
@@ -130,28 +149,89 @@ export function SettingsPage() {
         </nav>
         <article className="min-w-0 flex-1 panel panel-pad-lg">
           {tab === 'Profile' && (
-            <div className="space-y-4">
-              <p className="text-sm">
-                Signed in as <strong>{crm.currentUser?.name}</strong> ({crm.currentUser?.email})
-              </p>
-              <p className="text-sm text-text-muted">
-                Role: <span className="capitalize">{crm.currentUser?.role}</span>
-              </p>
-              <Select
-                label="Theme"
-                className="max-w-xs"
-                value={crm.preferences.theme}
-                onChange={(e) =>
-                  crm.setPreferences({
-                    theme: e.target.value as 'light' | 'dark' | 'system',
-                  })
-                }
-                options={[
-                  { value: 'light', label: 'Light' },
-                  { value: 'dark', label: 'Dark' },
-                  { value: 'system', label: 'System' },
-                ]}
-              />
+            <div className="space-y-6">
+              <section className="space-y-4">
+                <p className="text-sm text-text-muted">
+                  Signed in as <strong className="text-text">{crm.currentUser?.email}</strong> ·{' '}
+                  <span className="capitalize">{crm.currentUser?.role}</span>
+                </p>
+                <Input
+                  label="Display name"
+                  className="max-w-md"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                />
+                <Button
+                  disabled={savingProfile || !profileName.trim()}
+                  onClick={async () => {
+                    setSavingProfile(true)
+                    try {
+                      await api.updateProfile({ name: profileName.trim() })
+                      await crm.refreshWorkspace()
+                      toast.success('Profile updated')
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : 'Update failed')
+                    } finally {
+                      setSavingProfile(false)
+                    }
+                  }}
+                >
+                  {savingProfile ? 'Saving…' : 'Save profile'}
+                </Button>
+              </section>
+              <section className="space-y-4 border-t border-border pt-6">
+                <h3 className="text-sm font-semibold text-text">Appearance</h3>
+                <Select
+                  label="Theme"
+                  className="max-w-xs"
+                  value={crm.preferences.theme === 'dark' ? 'dark' : 'light'}
+                  onChange={(e) =>
+                    crm.setPreferences({
+                      theme: e.target.value as 'light' | 'dark',
+                    })
+                  }
+                  options={[
+                    { value: 'light', label: 'Light' },
+                    { value: 'dark', label: 'Dark' },
+                  ]}
+                />
+              </section>
+              {hasPassword && (
+                <section className="space-y-4 border-t border-border pt-6">
+                  <h3 className="text-sm font-semibold text-text">Password</h3>
+                  <PasswordInput
+                    label="Current password"
+                    className="max-w-md"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                  <PasswordInput
+                    label="New password"
+                    className="max-w-md"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                  <PasswordChangeChecklist newPassword={newPassword} />
+                  <Button
+                    variant="secondary"
+                    disabled={!currentPassword.trim() || !isNewPasswordValid(newPassword)}
+                    onClick={async () => {
+                      try {
+                        await api.changePassword({ currentPassword, newPassword })
+                        setCurrentPassword('')
+                        setNewPassword('')
+                        toast.success('Password updated')
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : 'Password change failed')
+                      }
+                    }}
+                  >
+                    Change password
+                  </Button>
+                </section>
+              )}
             </div>
           )}
 
@@ -240,20 +320,12 @@ export function SettingsPage() {
           )}
 
           {tab === 'Integrations' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <p className="text-sm text-text-muted">
-                Configure Slack, HubSpot, Stripe, Gmail, and more on the integrations hub. OAuth for
-                Google/Microsoft is set in <code>server/.env</code>.
+                {integrations.filter((i) => i.enabled).length} of {integrations.length} enabled.
+                Zapier and Make hooks receive the same events as Settings webhooks when enabled.
               </p>
-              <a
-                href="/integrations"
-                className="inline-flex rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-              >
-                Open integrations hub →
-              </a>
-              <p className="text-xs text-text-muted">
-                {integrations.filter((i) => i.enabled).length} of {integrations.length} enabled
-              </p>
+              <IntegrationHealthSummary integrations={integrations} />
             </div>
           )}
 
@@ -690,6 +762,6 @@ export function SettingsPage() {
           )}
         </article>
       </section>
-    </>
+    </PageFrame>
   )
 }

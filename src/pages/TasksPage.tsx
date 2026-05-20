@@ -1,6 +1,6 @@
 import { Check, Clock, ListTodo, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Input } from '../components/ui/Input'
@@ -13,6 +13,7 @@ import { deleteConfirm } from '../lib/confirm'
 import type { Task, TaskPriority, TaskStatus } from '../types'
 import { formatDate } from '../lib/format'
 import { USER_SARAH } from '../lib/ids'
+import { PRIORITY_BADGE } from '../lib/theme'
 
 type TaskForm = Omit<Task, 'id' | 'createdAt'>
 
@@ -36,11 +37,7 @@ const emptyForm: TaskForm = {
   tagIds: [],
 }
 
-const priorityColors: Record<TaskPriority, string> = {
-  low: 'bg-slate-100 text-slate-600',
-  medium: 'bg-amber-100 text-amber-800',
-  high: 'bg-rose-100 text-rose-700',
-}
+const priorityColors = PRIORITY_BADGE as Record<TaskPriority, string>
 
 export function TasksPage() {
   const {
@@ -130,29 +127,24 @@ export function TasksPage() {
   ]
 
   return (
-    <div>
-      <PageHeader
-        title="Tasks"
-        description="Follow-ups and activities tied to your pipeline"
-        actions={
-          <Button onClick={openCreate}>
-            <Plus size={16} />
-            Add task
-          </Button>
-        }
-      />
-      <div className="page-shell">
+    <PageFrame
+      title="Tasks"
+      description="Follow-ups and activities tied to your pipeline"
+      accent="amber"
+      actions={
+        <Button onClick={openCreate}>
+          <Plus size={16} />
+          Add task
+        </Button>
+      }
+    >
         <div className="mb-6 flex flex-wrap gap-2">
           {filters.map((f) => (
             <button
               key={f.id}
               type="button"
               onClick={() => setFilter(f.id)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                filter === f.id
-                  ? 'bg-brand-600 text-white'
-                  : 'bg-surface text-text-muted ring-1 ring-border hover:text-text'
-              }`}
+              className={`chip-filter ${filter === f.id ? 'chip-filter--active' : ''}`}
             >
               {f.label}
             </button>
@@ -266,7 +258,6 @@ export function TasksPage() {
             ))}
           </ul>
         )}
-      </div>
 
       <Modal
         open={modalOpen}
@@ -378,6 +369,6 @@ export function TasksPage() {
           />
         </div>
       </Modal>
-    </div>
+    </PageFrame>
   )
 }

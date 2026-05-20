@@ -12,6 +12,7 @@ import {
   signAccessToken,
 } from '../lib/jwt.js'
 import { prisma } from '../lib/prisma.js'
+import { passwordSchema, parseNewPassword } from '../lib/passwordPolicy.js'
 import { callbackUrl, getOidcConfig, type SsoProvider } from '../lib/sso.js'
 import type { AuthRequest } from '../middleware/auth.js'
 import { requireAuth } from '../middleware/auth.js'
@@ -25,7 +26,7 @@ const loginSchema = z.object({
 
 const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: passwordSchema,
   name: z.string().min(1),
   organizationName: z.string().min(1),
 })
@@ -46,7 +47,8 @@ async function issueSession(
 authRouter.post('/register', async (req, res) => {
   const parsed = registerSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten() })
+    const msg = parsed.error.issues[0]?.message ?? 'Invalid registration'
+    res.status(400).json({ error: msg })
     return
   }
   const { email, password, name, organizationName } = parsed.data
@@ -191,7 +193,52 @@ authRouter.get('/me', requireAuth, async (req: AuthRequest, res) => {
     user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar },
     organizationId: req.auth!.orgId,
     role: req.auth!.role,
+    hasPassword: Boolean(user.passwordHash),
   })
+})
+
+authRouter.patch('/profile', requireAuth, async (req: AuthRequest, res) => {
+  const body = z.object({ name: z.string().min(1).max(120) }).parse(req.body)
+  const user = await prisma.user.update({
+    where: { id: req.auth!.sub },
+    data: { name: body.name.trim() },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'user.profile_updated', 'user', user.id)
+  res.json({ user: { id: user.id, email: user.email, name: user.name } })
+})
+
+authRouter.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
+  const parsed = z
+    .object({
+      currentPassword: z.string().min(1),
+      newPassword: passwordSchema,
+    })
+    .safeParse(req.body)
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? 'Invalid password'
+    res.status(400).json({ error: msg })
+    return
+  }
+  const body = parsed.data
+
+  const user = await prisma.user.findUnique({ where: { id: req.auth!.sub } })
+  if (!user?.passwordHash) {
+    res.status(400).json({ error: 'Password sign-in is not enabled for this account (SSO only)' })
+    return
+  }
+
+  const valid = await bcrypt.compare(body.currentPassword, user.passwordHash)
+  if (!valid) {
+    res.status(401).json({ error: 'Current password is incorrect' })
+    return
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await bcrypt.hash(body.newPassword, 12) },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'user.password_changed', 'user', user.id)
+  res.json({ ok: true })
 })
 
 authRouter.get('/invite/:token', async (req, res) => {
@@ -217,7 +264,7 @@ authRouter.get('/invite/:token', async (req, res) => {
 const acceptInviteSchema = z.object({
   token: z.string().min(1),
   name: z.string().min(1).optional(),
-  password: z.string().min(8).optional(),
+  password: z.string().optional(),
 })
 
 authRouter.post('/accept-invite', async (req, res) => {
@@ -252,7 +299,12 @@ authRouter.post('/accept-invite', async (req, res) => {
       res.status(400).json({ error: 'Name and password are required for new accounts' })
       return
     }
-    const passwordHash = await bcrypt.hash(password, 12)
+    const pw = parseNewPassword(password)
+    if (!pw.ok) {
+      res.status(400).json({ error: pw.message })
+      return
+    }
+    const passwordHash = await bcrypt.hash(pw.password, 12)
     user = await prisma.user.create({
       data: {
         email: invite.email,

@@ -67,7 +67,15 @@ const sections: { title: string; items: NavItem[] }[] = [
   },
 ]
 
-export function Sidebar() {
+export function Sidebar({
+  id,
+  mobileOpen = false,
+  onCloseMobile,
+}: {
+  id?: string
+  mobileOpen?: boolean
+  onCloseMobile?: () => void
+}) {
   const { currentUser, notifications, inbox, session } = useCrm()
 
   const unreadNotifs = notifications.filter((n) => n.userId === session?.userId && !n.read).length
@@ -81,8 +89,30 @@ export function Sidebar() {
     }),
   }))
 
+  const afterNav = () => {
+    onCloseMobile?.()
+  }
+
   return (
-    <aside className="glass-panel flex w-[15.5rem] shrink-0 flex-col border-r border-border/80">
+    <>
+      {mobileOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-[35] cursor-default bg-slate-900/45 backdrop-blur-[2px] lg:hidden"
+          aria-label="Close menu"
+          onClick={onCloseMobile}
+        />
+      )}
+      <aside
+        id={id}
+        className={[
+          'glass-panel flex shrink-0 flex-col border-r border-border/80',
+          'fixed inset-y-0 left-0 z-40 h-dvh w-[min(17.5rem,88vw)] max-w-[280px] transition-transform duration-200 ease-out lg:static lg:z-auto lg:h-auto lg:min-h-screen lg:max-w-none lg:w-[15.5rem] lg:translate-x-0 lg:visible lg:pointer-events-auto',
+          mobileOpen
+            ? 'translate-x-0'
+            : '-translate-x-full max-lg:pointer-events-none max-lg:invisible',
+        ].join(' ')}
+      >
       <div className="flex items-center gap-3 border-b border-border/80 px-4 py-4">
         <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-lg shadow-brand-600/25">
           <Handshake size={20} strokeWidth={2.25} />
@@ -103,6 +133,7 @@ export function Sidebar() {
                   <NavLink
                     to={to}
                     end={end}
+                    onClick={afterNav}
                     className={({ isActive }) =>
                       `nav-link ${isActive ? 'nav-link-active' : ''}`
                     }
@@ -125,6 +156,7 @@ export function Sidebar() {
       <div className="border-t border-border/80 p-2">
         <NavLink
           to="/settings"
+          onClick={afterNav}
           className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
         >
           <Settings size={16} />
@@ -135,5 +167,6 @@ export function Sidebar() {
         </NavLink>
       </div>
     </aside>
+    </>
   )
 }

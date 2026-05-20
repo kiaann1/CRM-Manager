@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "db:up": "docker compose up -d",
     "db:setup": "npm run db:push --prefix server && npm run db:seed --prefix server",
-    "db:setup:neon": "npm run db:setup:neon --prefix server"
+    "db:setup:neon": "npm run db:setup:neon --prefix server",
+    "smoke:api": "powershell -ExecutionPolicy Bypass -File scripts/smoke-api.ps1"
   },
   "dependencies": {
     "lucide-react": "^0.511.0",

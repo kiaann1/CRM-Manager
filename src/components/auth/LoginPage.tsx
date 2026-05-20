@@ -6,6 +6,7 @@ import { useCrm } from '../../context/CrmContext'
 import { useToast } from '../../context/ToastContext'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
+import { PasswordInput } from '../ui/PasswordInput'
 import { LoginSuccessSplash } from './LoginSuccessSplash'
 
 type LoginPhase = 'idle' | 'submitting' | 'success'
@@ -147,13 +148,13 @@ export function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             disabled={busy}
           />
-          <Input
+          <PasswordInput
             label="Password"
-            type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={busy}
+            autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
           />
           {error && <p className="text-sm text-rose-600">{error}</p>}
           <Button type="submit" className="w-full" disabled={busy}>

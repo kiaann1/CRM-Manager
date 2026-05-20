@@ -1,6 +1,8 @@
 import { Router } from 'express'
+import { randomBytes } from 'crypto'
 import { z } from 'zod'
 import { writeAudit } from '../lib/audit.js'
+import { config } from '../config.js'
 import { prisma } from '../lib/prisma.js'
 import type { AuthRequest } from '../middleware/auth.js'
 import { requireAuth } from '../middleware/auth.js'
@@ -256,16 +258,55 @@ crmExtrasRouter.delete('/board-items/:id', async (req: AuthRequest, res) => {
 })
 
 // ——— Products ———
+const productSpecRow = z.object({
+  name: z.string(),
+  value: z.string(),
+})
+
+const productCreateSchema = z.object({
+  name: z.string().min(1),
+  sku: z.string().min(1),
+  price: z.number().nonnegative(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  unitOfMeasure: z.string().optional(),
+  cost: z.number().nonnegative().nullable().optional(),
+  barcode: z.string().optional(),
+  imageUrl: z.string().optional(),
+  status: z.enum(['active', 'discontinued']).optional(),
+  specifications: z.array(productSpecRow).optional(),
+})
+
+const productPatchSchema = z.object({
+  name: z.string().min(1).optional(),
+  sku: z.string().min(1).optional(),
+  price: z.number().nonnegative().optional(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  unitOfMeasure: z.string().optional(),
+  cost: z.number().nonnegative().nullable().optional(),
+  barcode: z.string().optional(),
+  imageUrl: z.string().optional(),
+  status: z.enum(['active', 'discontinued']).optional(),
+  specifications: z.array(productSpecRow).optional(),
+})
+
 crmExtrasRouter.post('/products', async (req: AuthRequest, res) => {
-  const body = z
-    .object({ name: z.string().min(1), sku: z.string().min(1), price: z.number().nonnegative() })
-    .parse(req.body)
+  const body = productCreateSchema.parse(req.body)
   const product = await prisma.product.create({
     data: {
       organizationId: req.auth!.orgId,
       name: body.name.trim(),
       sku: body.sku.trim(),
       price: body.price,
+      description: body.description?.trim() ?? '',
+      category: body.category?.trim() ?? '',
+      unitOfMeasure: body.unitOfMeasure?.trim() || 'ea',
+      barcode: body.barcode?.trim() ?? '',
+      imageUrl: body.imageUrl?.trim() ?? '',
+      status: body.status ?? 'active',
+      specifications: body.specifications ?? [],
+      ...(body.cost !== undefined ? { cost: body.cost } : {}),
     },
   })
   await writeAudit(req.auth!.orgId, req.auth!.sub, 'product.created', 'product', product.id)
@@ -273,13 +314,7 @@ crmExtrasRouter.post('/products', async (req: AuthRequest, res) => {
 })
 
 crmExtrasRouter.patch('/products/:id', async (req: AuthRequest, res) => {
-  const body = z
-    .object({
-      name: z.string().min(1).optional(),
-      sku: z.string().min(1).optional(),
-      price: z.number().nonnegative().optional(),
-    })
-    .parse(req.body)
+  const body = productPatchSchema.parse(req.body)
   const existing = await prisma.product.findFirst({
     where: { id: param(req.params.id), organizationId: req.auth!.orgId },
   })
@@ -287,7 +322,20 @@ crmExtrasRouter.patch('/products/:id', async (req: AuthRequest, res) => {
     res.status(404).json({ error: 'Not found' })
     return
   }
-  const product = await prisma.product.update({ where: { id: existing.id }, data: body })
+  const data: Record<string, unknown> = {}
+  if (body.name !== undefined) data.name = body.name.trim()
+  if (body.sku !== undefined) data.sku = body.sku.trim()
+  if (body.price !== undefined) data.price = body.price
+  if (body.description !== undefined) data.description = body.description.trim()
+  if (body.category !== undefined) data.category = body.category.trim()
+  if (body.unitOfMeasure !== undefined) data.unitOfMeasure = body.unitOfMeasure.trim() || 'ea'
+  if (body.cost !== undefined) data.cost = body.cost
+  if (body.barcode !== undefined) data.barcode = body.barcode.trim()
+  if (body.imageUrl !== undefined) data.imageUrl = body.imageUrl.trim()
+  if (body.status !== undefined) data.status = body.status
+  if (body.specifications !== undefined) data.specifications = body.specifications
+  const product = await prisma.product.update({ where: { id: existing.id }, data: data as never })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'product.updated', 'product', product.id)
   res.json(product)
 })
 
@@ -300,6 +348,26 @@ crmExtrasRouter.delete('/products/:id', async (req: AuthRequest, res) => {
     return
   }
   await prisma.product.delete({ where: { id: existing.id } })
+  res.status(204).end()
+})
+
+crmExtrasRouter.post('/product-catalog-feed', async (req: AuthRequest, res) => {
+  const token = randomBytes(24).toString('hex')
+  await prisma.organization.update({
+    where: { id: req.auth!.orgId },
+    data: { productCatalogToken: token },
+  })
+  const url = `${config.apiUrl.replace(/\/$/, '')}/api/public/catalog/${token}`
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'org.product_catalog_feed_enabled', 'organization', req.auth!.orgId)
+  res.status(201).json({ token, url })
+})
+
+crmExtrasRouter.delete('/product-catalog-feed', async (req: AuthRequest, res) => {
+  await prisma.organization.update({
+    where: { id: req.auth!.orgId },
+    data: { productCatalogToken: null },
+  })
+  await writeAudit(req.auth!.orgId, req.auth!.sub, 'org.product_catalog_feed_disabled', 'organization', req.auth!.orgId)
   res.status(204).end()
 })
 

@@ -24,13 +24,15 @@ import { getNextBestActions } from '../lib/ai'
 import { formatCurrency, fullName } from '../lib/format'
 import { dealVelocityDays, weightedPipelineValue } from '../lib/pipeline'
 import { USER_SARAH } from '../lib/ids'
+import { badgeClass } from '../lib/theme'
 
 function initials(first: string, last: string) {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || '?'
 }
 
 function stageBadgeClass(crm: ReturnType<typeof useCrm>, stage: string) {
-  return crm.pipelineStages.find((s) => s.key === stage)?.color ?? 'bg-slate-100 text-slate-700'
+  const color = crm.pipelineStages.find((s) => s.key === stage)?.color ?? 'bg-slate-100 text-slate-700'
+  return badgeClass(color)
 }
 
 export function Dashboard() {
@@ -75,8 +77,10 @@ export function Dashboard() {
   const quickLinks = [
     { to: '/contacts', icon: Users, label: 'Contacts', desc: 'Relationships' },
     { to: '/companies', icon: Building2, label: 'Companies', desc: 'Accounts' },
+    { to: '/deals', icon: Handshake, label: 'Deals', desc: 'Pipeline' },
+    { to: '/products', icon: Sparkles, label: 'Products', desc: 'Catalog' },
+    { to: '/integrations', icon: Zap, label: 'Integrations', desc: 'Slack, HubSpot, …' },
     { to: '/tasks', icon: ListTodo, label: 'Tasks', desc: 'To-dos & follow-ups' },
-    { to: '/automations', icon: Zap, label: 'Automations', desc: 'Workflows' },
     { to: '/calendar', icon: Calendar, label: 'Calendar', desc: 'Meetings' },
     { to: '/goals', icon: Target, label: 'Goals', desc: 'Quotas' },
   ]

@@ -1,6 +1,6 @@
 import { Check, Mail, MessageSquarePlus, Reply, Send, Users, User } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
@@ -79,27 +79,33 @@ export function InboxPage() {
     }
 
     setSending(true)
-    sendInboxMessage({
-      subject: subject.trim(),
-      body: body.trim(),
-      ...(composeTarget === 'team' ? { teamId } : { recipientUserId }),
-    })
-    toast.success(composeTarget === 'team' ? 'Posted to team' : 'Message sent')
-    setComposeOpen(false)
-    setSending(false)
+    try {
+      await sendInboxMessage({
+        subject: subject.trim(),
+        body: body.trim(),
+        ...(composeTarget === 'team' ? { teamId } : { recipientUserId }),
+      })
+      toast.success(composeTarget === 'team' ? 'Posted to team' : 'Message sent')
+      setComposeOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send message')
+    } finally {
+      setSending(false)
+    }
   }
 
-  const sendReply = (msg: (typeof inbox)[0]) => {
+  const sendReply = async (msg: (typeof inbox)[0]) => {
     if (!replyBody.trim() || !currentUser) {
       toast.error('Write a reply')
       return
     }
 
+    try {
     if (msg.senderId || msg.recipientUserId) {
       const recipient =
         msg.senderId && msg.senderId !== currentUser.id ? msg.senderId : msg.recipientUserId
       if (recipient) {
-        sendInboxMessage({
+        await sendInboxMessage({
           subject: `Re: ${msg.subject}`,
           body: replyBody.trim(),
           recipientUserId: recipient,
@@ -123,9 +129,12 @@ export function InboxPage() {
       }
     }
 
-    markInboxRead(msg.id)
+    await markInboxRead(msg.id)
     setReplyId(null)
     setReplyBody('')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Reply failed')
+    }
   }
 
   const messageLabel = (m: (typeof inbox)[0]) => {
@@ -151,46 +160,42 @@ export function InboxPage() {
   ]
 
   return (
-    <>
-      <PageHeader
-        title="Inbox"
-        description="Team channels, direct messages, and shared inbound mail"
-        actions={
-          <div className="flex flex-wrap gap-2">
-            {unread > 0 && (
-              <Button
-                variant="secondary"
-                onClick={() => inbox.filter((m) => !m.read).forEach((m) => markInboxRead(m.id))}
-              >
-                <Check size={16} /> Mark all read
-              </Button>
-            )}
-            <Button onClick={() => openCompose()}>
-              <MessageSquarePlus size={16} className="mr-1 inline" />
-              New message
+    <PageFrame
+      title="Inbox"
+      description="Team channels, direct messages, and shared inbound mail"
+      accent="brand"
+      actions={
+        <div className="flex flex-wrap gap-2">
+          {unread > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => inbox.filter((m) => !m.read).forEach((m) => markInboxRead(m.id))}
+            >
+              <Check size={16} /> Mark all read
             </Button>
-          </div>
-        }
-      />
-
-      <div className="flex flex-wrap gap-2 border-b border-border px-8 pb-4 dark:border-slate-700">
-        {filters.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            onClick={() => setFilter(f.key)}
-            className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-              filter === f.key
-                ? 'bg-brand-600 text-white'
-                : 'bg-surface-muted text-text-muted hover:text-text'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      <ul className="space-y-2 p-8">
+          )}
+          <Button onClick={() => openCompose()}>
+            <MessageSquarePlus size={16} className="mr-1 inline" />
+            New message
+          </Button>
+        </div>
+      }
+      toolbar={
+        <div className="flex flex-wrap gap-2">
+          {filters.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              className={`chip-filter ${filter === f.key ? 'chip-filter--active' : ''}`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      }
+    >
+      <ul className="space-y-2">
         {filtered.map((m) => {
           const isMine = m.senderId === currentUser?.id
           const isInternal = Boolean(m.senderId)
@@ -211,7 +216,7 @@ export function InboxPage() {
                     )}
                     {messageLabel(m)}
                     {isMine && (
-                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase dark:bg-slate-800">
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                         You
                       </span>
                     )}
@@ -265,7 +270,7 @@ export function InboxPage() {
       </ul>
 
       {!filtered.length && (
-        <p className="px-8 pb-8 text-text-muted">
+        <p className="text-text-muted">
           {filter === 'all' ? 'Inbox empty — post a message to your team or a teammate.' : 'No messages in this view.'}
         </p>
       )}
@@ -337,6 +342,6 @@ export function InboxPage() {
           </div>
         </form>
       </Modal>
-    </>
+    </PageFrame>
   )
 }

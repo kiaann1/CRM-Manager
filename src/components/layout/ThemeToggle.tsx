@@ -1,34 +1,21 @@
-import { Monitor, Moon, Sun } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
 import { useCrm } from '../../context/CrmContext'
-import type { ThemeMode } from '../../types'
-
-const modes: { value: ThemeMode; icon: typeof Sun; label: string }[] = [
-  { value: 'light', icon: Sun, label: 'Light' },
-  { value: 'dark', icon: Moon, label: 'Dark' },
-  { value: 'system', icon: Monitor, label: 'System' },
-]
+import { normalizeTheme } from '../../lib/theme'
 
 export function ThemeToggle() {
   const { preferences, setPreferences } = useCrm()
-  const current = preferences.theme
-
-  const cycle = () => {
-    const i = modes.findIndex((m) => m.value === current)
-    const next = modes[(i + 1) % modes.length]!
-    setPreferences({ theme: next.value })
-  }
-
-  const Icon = modes.find((m) => m.value === current)?.icon ?? Monitor
+  const theme = normalizeTheme(preferences.theme)
+  const isDark = theme === 'dark'
 
   return (
     <button
       type="button"
-      onClick={cycle}
+      onClick={() => setPreferences({ theme: isDark ? 'light' : 'dark' })}
       className="btn-icon"
-      title={`Theme: ${current} (click to change)`}
-      aria-label="Toggle theme"
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
-      <Icon size={18} />
+      {isDark ? <Sun size={18} /> : <Moon size={18} />}
     </button>
   )
 }

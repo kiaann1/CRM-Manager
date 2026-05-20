@@ -5,6 +5,7 @@ import { api } from '../lib/api/client'
 import { useToast } from '../context/ToastContext'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { PasswordInput } from '../components/ui/PasswordInput'
 
 export function InviteAcceptPage() {
   const { token } = useParams<{ token: string }>()
@@ -106,13 +107,11 @@ export function InviteAcceptPage() {
                   autoComplete="name"
                 />
               )}
-              <Input
+              <PasswordInput
                 label={preview.existingUser ? 'Password' : 'Create password'}
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={8}
                 autoComplete={preview.existingUser ? 'current-password' : 'new-password'}
               />
               {error && <p className="text-sm text-rose-600">{error}</p>}

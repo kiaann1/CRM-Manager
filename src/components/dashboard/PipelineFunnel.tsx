@@ -1,6 +1,7 @@
 import { useCrm } from '../../context/CrmContext'
 import { formatCurrency } from '../../lib/format'
 import { funnelByStage } from '../../lib/pipeline'
+import { badgeClass } from '../../lib/theme'
 import { DashboardPanel } from './DashboardPanel'
 
 export function PipelineFunnel() {
@@ -21,7 +22,7 @@ export function PipelineFunnel() {
           return (
             <li key={row.stage}>
               <div className="mb-1.5 flex items-center justify-between gap-2 text-sm">
-                <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${row.color}`}>
+                <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${badgeClass(row.color)}`}>
                   {row.label}
                 </span>
                 <span className="text-xs font-medium text-text-muted">

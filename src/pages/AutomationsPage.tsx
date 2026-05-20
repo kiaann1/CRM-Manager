@@ -1,6 +1,7 @@
 import { Plus, Trash2, Zap } from 'lucide-react'
 import { useState } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { Link } from 'react-router-dom'
+import { PageFrame } from '../components/layout/PageFrame'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
@@ -58,17 +59,17 @@ export function AutomationsPage() {
   }
 
   return (
-    <div>
-      <PageHeader
-        title="Automations"
-        description="Workflows, sequences, webhooks, integrations, and approvals"
-        actions={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus size={16} /> New rule
-          </Button>
-        }
-      />
-      <div className="page-shell grid gap-6 lg:grid-cols-2">
+    <PageFrame
+      title="Automations"
+      description="Workflows, sequences, webhooks, integrations, and approvals"
+      accent="rose"
+      bodyClassName="grid gap-6 lg:grid-cols-2"
+      actions={
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus size={16} /> New rule
+        </Button>
+      }
+    >
         <section className="panel panel-pad">
           <h2 className="mb-4 flex items-center gap-2 font-semibold">
             <Zap size={18} /> Rules
@@ -121,33 +122,59 @@ export function AutomationsPage() {
         <section className="space-y-4">
           <div className="panel panel-pad">
             <h2 className="mb-3 font-semibold">Email sequences</h2>
-            {emailSequences.map((s) => (
-              <p key={s.id} className="text-sm">
-                {s.name} — {s.steps.length} steps {s.enabled ? '✓' : ''}
-              </p>
-            ))}
+            {emailSequences.length === 0 ? (
+              <p className="text-sm text-text-muted">No sequences — refresh after first load for a sample nurture flow.</p>
+            ) : (
+              emailSequences.map((s) => (
+                <p key={s.id} className="text-sm">
+                  {s.name} — {s.steps.length} steps {s.enabled ? '✓' : ''}
+                </p>
+              ))
+            )}
           </div>
           <div className="panel panel-pad">
             <h2 className="mb-3 font-semibold">Webhooks & API</h2>
-            {webhooks.map((w) => (
-              <p key={w.id} className="truncate text-sm text-text-muted">
-                {w.url} ({w.events.join(', ')})
+            {webhooks.length === 0 ? (
+              <p className="text-sm text-text-muted">
+                No outbound webhooks.{' '}
+                <Link to="/settings?tab=Webhooks" className="font-medium text-brand-600 hover:underline">
+                  Add one in Settings
+                </Link>
+                .
               </p>
-            ))}
+            ) : (
+              webhooks.map((w) => (
+                <p key={w.id} className="truncate text-sm text-text-muted">
+                  {w.url} ({w.events.join(', ')})
+                </p>
+              ))
+            )}
             <p className="mt-2 text-xs text-text-muted">
-              Public REST API: POST /api/v1/deals (configure in Settings)
+              API keys:{' '}
+              <Link to="/settings?tab=Security" className="text-brand-600 hover:underline">
+                Settings → Security
+              </Link>
             </p>
           </div>
           <div className="panel panel-pad">
             <h2 className="mb-3 font-semibold">Integrations</h2>
-            {integrations.map((i) => (
-              <div key={i.id} className="flex justify-between py-1 text-sm">
-                <span>{i.name}</span>
-                <span className={i.enabled ? 'text-emerald-600' : 'text-text-muted'}>
-                  {i.enabled ? 'Connected' : 'Off'}
-                </span>
-              </div>
-            ))}
+            {integrations.length === 0 ? (
+              <p className="text-sm text-text-muted">
+                <Link to="/integrations" className="text-brand-600 hover:underline">
+                  Open Integrations
+                </Link>{' '}
+                to connect Slack, HubSpot, and more.
+              </p>
+            ) : (
+              integrations.map((i) => (
+                <div key={i.id} className="flex justify-between py-1 text-sm">
+                  <span>{i.name}</span>
+                  <span className={i.enabled ? 'text-emerald-600' : 'text-text-muted'}>
+                    {i.enabled ? 'On' : 'Off'}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
           <div className="panel panel-pad">
             <h2 className="mb-3 font-semibold">Pending approvals</h2>
@@ -192,7 +219,6 @@ export function AutomationsPage() {
             )}
           </div>
         </section>
-      </div>
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="New automation">
         <div className="space-y-4">
@@ -227,6 +253,6 @@ export function AutomationsPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageFrame>
   )
 }

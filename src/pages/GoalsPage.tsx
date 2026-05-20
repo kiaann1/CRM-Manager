@@ -1,6 +1,6 @@
 import { Pencil, Plus, Target, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
@@ -10,7 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Select } from '../components/ui/Select'
-import type { Goal } from '../types'
+import type { Goal, Sprint } from '../types'
 
 type GoalForm = Omit<Goal, 'id'>
 
@@ -26,15 +26,42 @@ function emptyGoal(ownerId: string): GoalForm {
   }
 }
 
+type SprintForm = Omit<Sprint, 'id'>
+
+function defaultSprint(teamId: string): SprintForm {
+  const start = new Date()
+  const end = new Date(start.getTime() + 14 * 24 * 60 * 60 * 1000)
+  return {
+    name: '',
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+    teamId,
+  }
+}
+
 export function GoalsPage() {
-  const { goals, sprints, tasks, timeEntries, users, addGoal, updateGoal, deleteGoal, currentUser } =
-    useCrm()
+  const {
+    goals,
+    sprints,
+    tasks,
+    timeEntries,
+    users,
+    teams,
+    addGoal,
+    updateGoal,
+    deleteGoal,
+    addSprint,
+    currentUser,
+  } = useCrm()
   const toast = useToast()
   const [modalOpen, setModalOpen] = useState(false)
+  const [sprintModalOpen, setSprintModalOpen] = useState(false)
   const [editing, setEditing] = useState<Goal | null>(null)
   const [form, setForm] = useState<GoalForm>(() =>
     emptyGoal(currentUser?.id ?? users[0]?.id ?? ''),
   )
+  const defaultTeamId = currentUser?.teamId ?? teams[0]?.id ?? ''
+  const [sprintForm, setSprintForm] = useState<SprintForm>(() => defaultSprint(defaultTeamId))
 
   const ownerId = currentUser?.id ?? users[0]?.id ?? ''
 
@@ -71,21 +98,40 @@ export function GoalsPage() {
   }
 
   const userOptions = users.map((u) => ({ value: u.id, label: u.name }))
+  const teamOptions = teams.map((t) => ({ value: t.id, label: t.name }))
+
+  const submitSprint = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!sprintForm.name.trim() || !sprintForm.teamId) {
+      toast.error('Sprint name and team required')
+      return
+    }
+    addSprint({ ...sprintForm, name: sprintForm.name.trim() })
+    toast.success('Sprint created')
+    setSprintModalOpen(false)
+    setSprintForm(defaultSprint(defaultTeamId))
+  }
 
   return (
-    <>
-      <PageHeader
-        title="Goals & workload"
-        description="OKRs, sprints, time tracking, and capacity"
-        actions={
+    <PageFrame
+      title="Goals & workload"
+      description="OKRs, sprints, time tracking, and capacity"
+      accent="emerald"
+      bodyClassName="grid gap-6 lg:grid-cols-2"
+      actions={
+        <>
+          <Button variant="secondary" onClick={() => setSprintModalOpen(true)} disabled={!defaultTeamId}>
+            <Plus size={16} />
+            Add sprint
+          </Button>
           <Button onClick={openCreate}>
             <Plus size={16} />
             Add goal
           </Button>
-        }
-      />
-      <section className="page-shell grid gap-6 lg:grid-cols-2">
-        <article className="card p-5">
+        </>
+      }
+    >
+        <article className="panel panel-pad">
           <h2 className="mb-4 font-semibold text-text">OKRs</h2>
           {goals.length === 0 ? (
             <EmptyState
@@ -148,17 +194,35 @@ export function GoalsPage() {
             </ul>
           )}
         </article>
-        <article className="card p-5">
-          <h2 className="mb-4 font-semibold text-text">Sprints</h2>
+        <article className="panel panel-pad">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="font-semibold text-text">Sprints</h2>
+            <Button variant="secondary" className="!py-1.5 text-xs" onClick={() => setSprintModalOpen(true)} disabled={!defaultTeamId}>
+              <Plus size={14} /> New
+            </Button>
+          </div>
           {sprints.length === 0 ? (
-            <p className="text-sm text-text-muted">No sprints configured yet.</p>
+            <EmptyState
+              icon={Target}
+              title="No sprints yet"
+              description="Group tasks into a two-week sprint for your team."
+              action={
+                <Button variant="secondary" onClick={() => setSprintModalOpen(true)} disabled={!defaultTeamId}>
+                  <Plus size={16} /> Add sprint
+                </Button>
+              }
+            />
           ) : (
-            sprints.map((s) => (
-              <p key={s.id} className="text-sm text-text">
-                {s.name} ({s.start} → {s.end}) —{' '}
-                {tasks.filter((t) => t.sprintId === s.id).length} tasks
-              </p>
-            ))
+            <ul className="space-y-2">
+              {sprints.map((s) => (
+                <li key={s.id} className="list-item p-3 text-sm">
+                  <p className="font-medium">{s.name}</p>
+                  <p className="text-xs text-text-muted">
+                    {s.start} → {s.end} · {tasks.filter((t) => t.sprintId === s.id).length} tasks
+                  </p>
+                </li>
+              ))}
+            </ul>
           )}
           <h2 className="mb-2 mt-6 font-semibold text-text">Workload by rep</h2>
           {users.map((u) => {
@@ -173,7 +237,6 @@ export function GoalsPage() {
             )
           })}
         </article>
-      </section>
 
       <Modal
         open={modalOpen}
@@ -229,6 +292,56 @@ export function GoalsPage() {
           </div>
         </form>
       </Modal>
-    </>
+
+      <Modal
+        open={sprintModalOpen}
+        onClose={() => setSprintModalOpen(false)}
+        title="New sprint"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setSprintModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="sprint-form">
+              Create sprint
+            </Button>
+          </>
+        }
+      >
+        <form id="sprint-form" className="space-y-4" onSubmit={submitSprint}>
+          <Input
+            label="Sprint name"
+            required
+            value={sprintForm.name}
+            onChange={(e) => setSprintForm({ ...sprintForm, name: e.target.value })}
+            placeholder="e.g. Sprint 25 — Q2 push"
+          />
+          {teamOptions.length > 0 && (
+            <Select
+              label="Team"
+              value={sprintForm.teamId}
+              onChange={(e) => setSprintForm({ ...sprintForm, teamId: e.target.value })}
+              options={teamOptions}
+            />
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Start date"
+              type="date"
+              required
+              value={sprintForm.start}
+              onChange={(e) => setSprintForm({ ...sprintForm, start: e.target.value })}
+            />
+            <Input
+              label="End date"
+              type="date"
+              required
+              value={sprintForm.end}
+              onChange={(e) => setSprintForm({ ...sprintForm, end: e.target.value })}
+            />
+          </div>
+        </form>
+      </Modal>
+    </PageFrame>
   )
 }

@@ -28,7 +28,7 @@ export type CustomFieldType =
   | 'formula'
 export type ViewType = 'table' | 'board' | 'calendar' | 'timeline' | 'gallery'
 export type UserRole = 'admin' | 'manager' | 'rep' | 'guest' | 'readonly'
-export type ThemeMode = 'light' | 'dark' | 'system'
+export type ThemeMode = 'light' | 'dark'
 export type TicketStatus = 'open' | 'pending' | 'resolved' | 'closed'
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
 export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected'
@@ -207,11 +207,23 @@ export interface CalendarEvent {
   externalSync: 'none' | 'google' | 'outlook'
 }
 
+export type ProductSpecification = { name: string; value: string }
+
 export interface Product {
   id: string
   name: string
   sku: string
   price: number
+  description: string
+  category: string
+  unitOfMeasure: string
+  cost: number | null
+  barcode: string
+  imageUrl: string
+  status: 'active' | 'discontinued'
+  specifications: ProductSpecification[]
+  createdAt: string
+  updatedAt: string
 }
 
 export interface QuoteLine {
@@ -511,6 +523,8 @@ export interface CrmState {
   version: number
   session: AuthSession | null
   preferences: UserPreferences
+  /** Read-only storefront feed; set via Products → Catalog API. */
+  productCatalogToken: string | null
   users: User[]
   workspaces: Workspace[]
   teams: Team[]

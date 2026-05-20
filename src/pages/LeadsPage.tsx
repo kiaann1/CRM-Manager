@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ImportExportBar } from '../components/ImportExportBar'
 import { ListFilterBar } from '../components/ListFilterBar'
 import { useListFilters } from '../hooks/useListFilters'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { RecordDrawer } from '../components/RecordDrawer'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -16,6 +16,7 @@ import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
 import type { Lead, LeadStage } from '../types'
 import { USER_SARAH } from '../lib/ids'
+import { badgeClass } from '../lib/theme'
 
 const STAGES = [
   { value: '', label: 'All' },
@@ -92,14 +93,19 @@ export function LeadsPage() {
   }
 
   return (
-    <div>
-      <PageHeader title="Leads" description="Qualify, score, and convert inbound prospects" actions={
+    <PageFrame
+      title="Leads"
+      description="Qualify, score, and convert inbound prospects"
+      accent="sky"
+      actions={
         <>
           <ImportExportBar entity="leads" />
-          <Button onClick={openCreate}><Plus size={16} /> Add lead</Button>
+          <Button onClick={openCreate}>
+            <Plus size={16} /> Add lead
+          </Button>
         </>
-      } />
-      <div className="page-shell">
+      }
+    >
         <ListFilterBar
           query={filters.query}
           onQueryChange={filters.setQuery}
@@ -147,7 +153,7 @@ export function LeadsPage() {
                 .map((l) => (
                 <tr key={l.id} className="table-row-hover">
                   <td className="px-4 py-3 font-medium"><button type="button" className="text-brand-600" onClick={() => setDrawer(l)}>{l.firstName} {l.lastName}</button></td>
-                  <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${l.score >= 70 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100'}`}>{l.score}</span></td>
+                  <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${badgeClass(l.score >= 70 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600')}`}>{l.score}</span></td>
                   <td className="px-4 py-3 capitalize">{l.stage}</td>
                   <td className="px-4 py-3">{l.source}</td>
                   <td className="px-4 py-3 text-text-muted">{l.utmSource}/{l.utmCampaign || '—'}</td>
@@ -160,9 +166,13 @@ export function LeadsPage() {
                       <Button
                         variant="ghost"
                         className="!px-2"
-                        onClick={() => {
-                          convertLead(l.id)
-                          toast.success('Lead converted to contact')
+                        onClick={async () => {
+                          try {
+                            await convertLead(l.id)
+                            toast.success('Lead converted to contact')
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : 'Convert failed')
+                          }
                         }}
                       >
                         <UserPlus size={16} />
@@ -191,7 +201,6 @@ export function LeadsPage() {
           </table>
           </div>
         )}
-      </div>
       <Modal
         open={modal}
         onClose={() => setModal(false)}
@@ -220,7 +229,14 @@ export function LeadsPage() {
           <TagPicker value={form.tagIds} onChange={(tagIds) => setForm({ ...form, tagIds })} />
         </form>
       </Modal>
-      {drawer && <RecordDrawer recordType="lead" recordId={drawer.id} title={`${drawer.firstName} ${drawer.lastName}`} onClose={() => setDrawer(null)} />}
-    </div>
+      {drawer && (
+        <RecordDrawer
+          recordType="lead"
+          recordId={drawer.id}
+          title={`${drawer.firstName} ${drawer.lastName}`}
+          onClose={() => setDrawer(null)}
+        />
+      )}
+    </PageFrame>
   )
 }

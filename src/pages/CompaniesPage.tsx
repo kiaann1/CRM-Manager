@@ -1,6 +1,6 @@
 import { Building2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Input } from '../components/ui/Input'
@@ -125,18 +125,17 @@ export function CompaniesPage() {
   ]
 
   return (
-    <div>
-      <PageHeader
-        title="Companies"
-        description="Organizations and accounts in your CRM"
-        actions={
-          <Button onClick={openCreate}>
-            <Plus size={16} />
-            Add company
-          </Button>
-        }
-      />
-      <div className="page-shell">
+    <PageFrame
+      title="Companies"
+      description="Organizations and accounts in your CRM"
+      accent="emerald"
+      actions={
+        <Button onClick={openCreate}>
+          <Plus size={16} />
+          Add company
+        </Button>
+      }
+    >
         <ListFilterBar
           query={filters.query}
           onQueryChange={filters.setQuery}
@@ -165,7 +164,7 @@ export function CompaniesPage() {
             }
           />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="page-card-grid">
             {filtered.map((company) => (
               <article key={company.id} className="card p-5">
                 <div className="flex items-start justify-between gap-2">
@@ -224,7 +223,6 @@ export function CompaniesPage() {
             ))}
           </div>
         )}
-      </div>
 
       <Modal
         open={modalOpen}
@@ -357,6 +355,6 @@ export function CompaniesPage() {
           onClose={() => setDrawerCompanyId(null)}
         />
       )}
-    </div>
+    </PageFrame>
   )
 }

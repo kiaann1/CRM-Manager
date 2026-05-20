@@ -1,9 +1,10 @@
-import { Megaphone, Pencil, Plus, Trash2 } from 'lucide-react'
+import { FileInput, Megaphone, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
+import { EmptyState } from '../components/ui/EmptyState'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
@@ -63,36 +64,58 @@ export function MarketingPage() {
     leads.filter((l) => l.utmSource === utmSource).length
 
   return (
-    <div>
-      <PageHeader
-        title="Marketing"
-        description="Forms, campaigns, UTM attribution, nurture sequences"
-        actions={
-          <Button onClick={openCreate}>
-            <Plus size={16} /> New campaign
-          </Button>
-        }
-      />
-      <div className="page-shell grid gap-6 lg:grid-cols-2">
+    <PageFrame
+      title="Marketing"
+      description="Forms, campaigns, UTM attribution, nurture sequences"
+      accent="rose"
+      bodyClassName="grid gap-6 lg:grid-cols-2"
+      actions={
+        <Button onClick={openCreate}>
+          <Plus size={16} /> New campaign
+        </Button>
+      }
+    >
         <section className="panel panel-pad">
           <h2 className="mb-4 font-semibold">Lead capture forms</h2>
-          {forms.map((f) => (
-            <div
-              key={f.id}
-              className="mb-4 list-item p-4"
-            >
-              <p className="font-medium">{f.name}</p>
-              <p className="text-xs text-text-muted">
-                {f.fields.length} fields · {f.submissions.length} submissions
-              </p>
-              <p className="mt-2 text-xs">Embed: /embed/form/{f.id}</p>
-            </div>
-          ))}
+          {forms.length === 0 ? (
+            <EmptyState
+              icon={FileInput}
+              title="No forms yet"
+              description="A demo capture form is created on first workspace load. Refresh the page after signing in."
+            />
+          ) : (
+            forms.map((f) => (
+              <div
+                key={f.id}
+                className="mb-4 list-item p-4"
+              >
+                <p className="font-medium">{f.name}</p>
+                <p className="text-xs text-text-muted">
+                  {f.fields.length} fields · {f.submissions.length} submissions
+                </p>
+                <p className="mt-2 font-mono text-xs text-text-muted">Embed: /embed/form/{f.id}</p>
+                {f.submissions.length > 0 && (
+                  <p className="mt-2 text-xs text-text-muted">
+                    Latest: {Object.values(f.submissions[0]?.data ?? {}).join(' · ')}
+                  </p>
+                )}
+              </div>
+            ))
+          )}
         </section>
         <section className="panel panel-pad">
           <h2 className="mb-4 font-semibold">Campaigns & attribution</h2>
           {campaigns.length === 0 ? (
-            <p className="text-sm text-text-muted">No campaigns yet.</p>
+            <EmptyState
+              icon={Megaphone}
+              title="No campaigns"
+              description="Track UTM sources and budgets for your lead gen programs."
+              action={
+                <Button onClick={openCreate}>
+                  <Plus size={16} /> New campaign
+                </Button>
+              }
+            />
           ) : (
             <ul className="space-y-3">
               {campaigns.map((c) => (
@@ -140,19 +163,30 @@ export function MarketingPage() {
           ))}
         </section>
         <section className="panel panel-pad lg:col-span-2">
-          <h2 className="mb-2 font-semibold">Meeting scheduler & live chat</h2>
+          <h2 className="mb-3 font-semibold">Nurture sequences</h2>
+          {emailSequences.length === 0 ? (
+            <p className="text-sm text-text-muted">No sequences yet — one is added on first workspace load.</p>
+          ) : (
+            <ul className="space-y-2">
+              {emailSequences.map((s) => (
+                <li key={s.id} className="list-item p-3 text-sm">
+                  <p className="font-medium">
+                    {s.name}{' '}
+                    <span className={s.enabled ? 'text-emerald-600' : 'text-text-muted'}>
+                      {s.enabled ? '· Active' : '· Paused'}
+                    </span>
+                  </p>
+                  <p className="text-xs text-text-muted">{s.steps.length} email steps</p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <h2 className="mb-2 mt-6 font-semibold">Meeting scheduler & live chat</h2>
           <p className="text-sm text-text-muted">
-            Scheduler link: /book/demo · Chat widget captures visitors as leads.
-          </p>
-          <p className="mt-2 text-sm">
-            Active nurture sequences:{' '}
-            {emailSequences
-              .filter((s) => s.enabled)
-              .map((s) => s.name)
-              .join(', ') || 'None'}
+            Scheduler: <span className="font-mono">/book/demo</span> · Chat widget captures visitors as leads
+            (coming soon).
           </p>
         </section>
-      </div>
 
       <Modal
         open={modalOpen}
@@ -186,6 +220,6 @@ export function MarketingPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageFrame>
   )
 }

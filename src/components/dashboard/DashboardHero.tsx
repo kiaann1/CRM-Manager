@@ -66,7 +66,10 @@ export function DashboardHero({
 
         <div className="flex flex-wrap gap-2">
           <Link to="/deals">
-            <Button className="!border-0 !bg-white !text-brand-700 shadow-md hover:!bg-brand-50">
+            <Button
+              variant="secondary"
+              className="!border-white !bg-white !text-brand-700 shadow-md hover:!bg-brand-50 hover:!text-brand-800 dark:!border-white dark:!bg-white dark:!text-brand-800 dark:hover:!bg-brand-50"
+            >
               <Plus size={16} /> New deal
             </Button>
           </Link>

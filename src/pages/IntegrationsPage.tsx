@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { IntegrationCard } from '../components/integrations/IntegrationCard'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { useCrm } from '../context/CrmContext'
 
 const categoryOrder = ['communication', 'calendar', 'automation', 'crm', 'billing'] as const
@@ -29,13 +29,12 @@ export function IntegrationsPage() {
   }, [crm.integrations])
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Integrations"
-        description="Connect Slack, email, HubSpot, Stripe, and automation tools. Test connections and sync data into your workspace."
-      />
-
-      <div className="page-shell space-y-6">
+    <PageFrame
+      title="Integrations"
+      description="Connect Slack, email, HubSpot, Stripe, and automation tools. Test connections and sync data into your workspace."
+      accent="brand"
+      bodyClassName="space-y-6"
+    >
       <div className="panel px-4 py-3 text-sm text-text-muted">
         <strong className="text-text">Tip:</strong> Outbound webhooks for custom events live under{' '}
         <a href="/settings" className="font-medium text-brand-600 hover:underline">
@@ -64,7 +63,6 @@ export function IntegrationsPage() {
       {crm.integrations.length === 0 && (
         <p className="text-sm text-text-muted">Loading integrations…</p>
       )}
-      </div>
-    </div>
+    </PageFrame>
   )
 }

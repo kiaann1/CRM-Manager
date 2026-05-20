@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useToast } from '../../context/ToastContext'
 import type { PipelineStageConfig } from '../../types'
+import { badgeClass } from '../../lib/theme'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 
@@ -27,7 +28,7 @@ export function PipelineStageRow({
 
   return (
     <li className="flex flex-wrap items-end gap-3 list-item p-3">
-      <span className={`rounded px-2 py-0.5 text-xs font-medium ${stage.color}`}>{stage.key}</span>
+      <span className={`rounded px-2 py-0.5 text-xs font-medium ${badgeClass(stage.color)}`}>{stage.key}</span>
       <Input
         label="Label"
         className="min-w-[8rem] flex-1"

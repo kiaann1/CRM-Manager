@@ -95,7 +95,7 @@ export function QuickCreateFab() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2">
+      <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-40 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
         {menuOpen && (
           <div className="rounded-xl border border-border bg-surface p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
             <button

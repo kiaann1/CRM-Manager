@@ -1,6 +1,6 @@
 import { GitMerge, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Input } from '../components/ui/Input'
@@ -96,26 +96,25 @@ export function ContactsPage() {
   ]
 
   return (
-    <div>
-      <PageHeader
-        title="Contacts"
-        description="People you work with across accounts"
-        actions={
-          <>
-            <ImportExportBar entity="contacts" />
-            {contacts.length >= 2 && (
-              <Button variant="secondary" onClick={() => setMergeOpen(true)}>
-                <GitMerge size={16} /> Merge
-              </Button>
-            )}
-            <Button onClick={openCreate}>
-              <Plus size={16} />
-              Add contact
+    <PageFrame
+      title="Contacts"
+      description="People you work with across accounts"
+      accent="violet"
+      actions={
+        <>
+          <ImportExportBar entity="contacts" />
+          {contacts.length >= 2 && (
+            <Button variant="secondary" onClick={() => setMergeOpen(true)}>
+              <GitMerge size={16} /> Merge
             </Button>
-          </>
-        }
-      />
-      <div className="page-shell">
+          )}
+          <Button onClick={openCreate}>
+            <Plus size={16} />
+            Add contact
+          </Button>
+        </>
+      }
+    >
         <ListFilterBar
           query={filters.query}
           onQueryChange={filters.setQuery}
@@ -205,7 +204,6 @@ export function ContactsPage() {
             </table>
           </div>
         )}
-      </div>
 
       <Modal
         open={modalOpen}
@@ -330,6 +328,6 @@ export function ContactsPage() {
           onClose={() => setDrawer(null)}
         />
       )}
-    </div>
+    </PageFrame>
   )
 }

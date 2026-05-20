@@ -4,7 +4,8 @@ import { PIPE_DEFAULT, TEAM_CS, TEAM_SALES, TERRITORY_WEST, USER_ADMIN, USER_MAR
 export const defaultState: CrmState = {
   version: 2,
   session: null,
-  preferences: { theme: 'system', emailDigest: true, pushEnabled: true },
+  preferences: { theme: 'light', emailDigest: true, pushEnabled: true },
+  productCatalogToken: null,
   users: [
     { id: USER_SARAH, name: 'Sarah Chen', email: 'sarah@crm.local', role: 'rep', teamId: TEAM_SALES, territoryId: TERRITORY_WEST },
     { id: USER_MARCUS, name: 'Marcus Webb', email: 'marcus@crm.local', role: 'manager', teamId: TEAM_SALES, territoryId: TERRITORY_WEST },
@@ -128,8 +129,44 @@ export const defaultState: CrmState = {
     { id: 'cal-1', title: 'Demo — Northwind', start: '2026-05-22T15:00:00Z', end: '2026-05-22T16:00:00Z', recordType: 'deal', recordId: 'dl-2', userId: USER_MARCUS, externalSync: 'google' },
   ],
   products: [
-    { id: 'prod-1', name: 'CRM Pro Seat', sku: 'CRM-PRO', price: 99 },
-    { id: 'prod-2', name: 'Implementation', sku: 'SVC-IMPL', price: 5000 },
+    {
+      id: 'prod-1',
+      name: 'CRM Pro Seat',
+      sku: 'CRM-PRO',
+      price: 99,
+      description: 'Named user license for CRM Pro tier, annual billing.',
+      category: 'Subscriptions',
+      unitOfMeasure: 'seat',
+      cost: 12,
+      barcode: '0086019200001',
+      imageUrl: '',
+      status: 'active',
+      specifications: [
+        { name: 'Billing', value: 'Annual' },
+        { name: 'Support', value: 'Business hours' },
+      ],
+      createdAt: '2026-01-01T10:00:00Z',
+      updatedAt: '2026-01-01T10:00:00Z',
+    },
+    {
+      id: 'prod-2',
+      name: 'Implementation package',
+      sku: 'SVC-IMPL',
+      price: 5000,
+      description: 'Fixed-scope onboarding: discovery, migration, training, go-live.',
+      category: 'Services',
+      unitOfMeasure: 'project',
+      cost: 2200,
+      barcode: '',
+      imageUrl: '',
+      status: 'active',
+      specifications: [
+        { name: 'Duration', value: '4–6 weeks' },
+        { name: 'Includes', value: 'Dedicated consultant' },
+      ],
+      createdAt: '2026-01-01T10:00:00Z',
+      updatedAt: '2026-01-01T10:00:00Z',
+    },
   ],
   quotes: [
     {

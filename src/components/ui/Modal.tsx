@@ -8,9 +8,11 @@ interface ModalProps {
   title: string
   children: ReactNode
   footer?: ReactNode
+  /** Wider shell for dense forms (e.g. product editor). */
+  panelClassName?: string
 }
 
-export function Modal({ open, onClose, title, children, footer }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, panelClassName = '' }: ModalProps) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -37,7 +39,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative w-full max-w-lg rounded-2xl bg-surface shadow-xl">
+      <div className={`relative w-full max-w-lg rounded-2xl bg-surface shadow-xl ${panelClassName}`.trim()}>
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-lg font-semibold text-text">{title}</h2>
           <Button variant="ghost" className="!p-2" onClick={onClose} aria-label="Close">

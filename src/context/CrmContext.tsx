@@ -13,6 +13,7 @@ import type {
   DealStage,
   Document,
   Goal,
+  Sprint,
   EmailLog,
   FileAttachment,
   Lead,
@@ -40,7 +41,7 @@ export interface CrmContextValue extends CrmState {
   deleteContact: (id: string) => void
   addLead: (data: Omit<Lead, 'id' | 'createdAt' | 'score'>) => void
   updateLead: (id: string, data: Partial<Lead>) => void
-  convertLead: (id: string) => void
+  convertLead: (id: string) => Promise<void>
   deleteLead: (id: string) => void
   addDeal: (data: Omit<Deal, 'id' | 'createdAt'>) => void
   updateDeal: (id: string, data: Partial<Deal>) => void
@@ -58,6 +59,7 @@ export interface CrmContextValue extends CrmState {
   addGoal: (data: Omit<Goal, 'id'>) => void
   updateGoal: (id: string, data: Partial<Goal>) => void
   deleteGoal: (id: string) => void
+  addSprint: (data: Omit<Sprint, 'id'>) => void
   addDocument: (data: Omit<Document, 'id' | 'updatedAt'>) => void
   updateDocument: (id: string, data: Partial<Document>) => void
   deleteDocument: (id: string) => void
@@ -72,7 +74,7 @@ export interface CrmContextValue extends CrmState {
     data: Partial<Pick<import('../types').PipelineStageConfig, 'label' | 'probability' | 'color'>>,
   ) => void
   deleteAutomation: (id: string) => void
-  addProduct: (data: Omit<CrmState['products'][0], 'id'>) => void
+  addProduct: (data: Omit<CrmState['products'][0], 'id' | 'createdAt' | 'updatedAt'>) => void
   updateProduct: (id: string, data: Partial<CrmState['products'][0]>) => void
   deleteProduct: (id: string) => void
   createBoard: (name: string) => void
@@ -93,8 +95,8 @@ export interface CrmContextValue extends CrmState {
     body: string
     teamId?: string
     recipientUserId?: string
-  }) => void
-  markInboxRead: (id: string) => void
+  }) => Promise<void>
+  markInboxRead: (id: string) => Promise<void>
   markAllNotificationsRead: () => void
   addComment: (data: Omit<Comment, 'id' | 'createdAt'>) => void
   markNotificationRead: (id: string) => void

@@ -12,6 +12,7 @@ import {
 } from 'react'
 import { api, ApiError } from '../lib/api/client'
 import { defaultState } from '../lib/storage'
+import { normalizeTheme } from '../lib/theme'
 import type { CrmState, DealStage, TaskStatus, UserPreferences } from '../types'
 import { WorkspaceLoader } from '../components/layout/WorkspaceLoader'
 import type { CrmContextValue } from './CrmContext'
@@ -24,7 +25,13 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(async () => {
     const data = await api.bootstrap()
-    setState(data)
+    setState({
+      ...data,
+      preferences: {
+        ...data.preferences,
+        theme: normalizeTheme(data.preferences.theme),
+      },
+    })
     return data
   }, [])
 
@@ -46,11 +53,9 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const root = document.documentElement
-    const theme = state.preferences.theme
-    const dark =
-      theme === 'dark' ||
-      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    const dark = normalizeTheme(state.preferences.theme) === 'dark'
     root.classList.toggle('dark', dark)
+    root.style.colorScheme = dark ? 'dark' : 'light'
   }, [state.preferences.theme])
 
   const login = useCallback(async (email: string, password: string) => {
@@ -74,8 +79,15 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
 
   const setPreferences = useCallback(
     async (prefs: Partial<UserPreferences>) => {
-      await api.updatePreferences(prefs)
-      setState((prev) => ({ ...prev, preferences: { ...prev.preferences, ...prefs } }))
+      const patch = { ...prefs }
+      if (patch.theme !== undefined) {
+        patch.theme = normalizeTheme(patch.theme)
+      }
+      await api.updatePreferences(patch)
+      setState((prev) => ({
+        ...prev,
+        preferences: { ...prev.preferences, ...patch },
+      }))
     },
     [],
   )
@@ -161,14 +173,7 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
       updateLead: (id, data) => {
         void after(() => api.updateLead(id, data))
       },
-      convertLead: (id) => {
-        void after(() =>
-          fetch(`${api.baseUrl}/api/v1/leads/${id}/convert`, {
-            method: 'POST',
-            credentials: 'include',
-          }),
-        )
-      },
+      convertLead: (id) => after(() => api.convertLead(id)),
       deleteLead: (id) => {
         void after(() => api.deleteLead(id))
       },
@@ -259,6 +264,9 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
       deleteGoal: (id) => {
         void after(() => api.deleteGoal(id))
       },
+      addSprint: (data) => {
+        void after(() => api.createSprint(data))
+      },
       addDocument: (data) => {
         void after(() => api.createDocument(data))
       },
@@ -342,12 +350,8 @@ export function CrmApiProvider({ children }: { children: ReactNode }) {
       deleteFile: (id) => {
         void after(() => api.deleteFile(id))
       },
-      sendInboxMessage: (data) => {
-        void after(() => api.sendInboxMessage(data))
-      },
-      markInboxRead: (id) => {
-        void after(() => api.markInboxRead(id))
-      },
+      sendInboxMessage: (data) => after(() => api.sendInboxMessage(data)),
+      markInboxRead: (id) => after(() => api.markInboxRead(id)),
       markAllNotificationsRead: () => {
         void after(() => api.markAllNotificationsRead())
       },

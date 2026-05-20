@@ -1,6 +1,6 @@
 import { Calendar, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
@@ -114,18 +114,17 @@ export function CalendarPage() {
   )
 
   return (
-    <>
-      <PageHeader
-        title="Calendar"
-        description="Schedule meetings and link them to CRM records"
-        actions={
-          <Button onClick={openCreate}>
-            <Plus size={16} />
-            Add meeting
-          </Button>
-        }
-      />
-      <div className="page-shell">
+    <PageFrame
+      title="Calendar"
+      description="Schedule meetings and link them to CRM records"
+      accent="sky"
+      actions={
+        <Button onClick={openCreate}>
+          <Plus size={16} />
+          Add meeting
+        </Button>
+      }
+    >
         {sorted.length === 0 ? (
           <EmptyState
             icon={Calendar}
@@ -180,7 +179,6 @@ export function CalendarPage() {
             ))}
           </ul>
         )}
-      </div>
 
       <Modal
         open={modalOpen}
@@ -260,6 +258,6 @@ export function CalendarPage() {
           />
         </form>
       </Modal>
-    </>
+    </PageFrame>
   )
 }

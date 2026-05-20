@@ -1,6 +1,6 @@
 import { LifeBuoy, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { PageHeader } from '../components/layout/PageHeader'
+import { PageFrame } from '../components/layout/PageFrame'
 import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { formatDate } from '../lib/format'
@@ -46,17 +46,17 @@ export function SupportPage() {
   }
 
   return (
-    <div>
-      <PageHeader
-        title="Support"
-        description="Tickets, SLA timers, health scores, onboarding & NPS"
-        actions={
-          <Button onClick={() => setModalOpen(true)}>
-            <Plus size={16} /> New ticket
-          </Button>
-        }
-      />
-      <div className="page-shell grid gap-6 lg:grid-cols-2">
+    <PageFrame
+      title="Support"
+      description="Tickets, SLA timers, health scores, onboarding & NPS"
+      accent="sky"
+      bodyClassName="grid gap-6 lg:grid-cols-2"
+      actions={
+        <Button onClick={() => setModalOpen(true)}>
+          <Plus size={16} /> New ticket
+        </Button>
+      }
+    >
         <section className="panel panel-pad">
           <h2 className="mb-4 flex items-center gap-2 font-semibold">
             <LifeBuoy size={18} /> Tickets
@@ -161,7 +161,6 @@ export function SupportPage() {
             {surveys.length === 0 && <p className="text-sm text-text-muted">No surveys yet</p>}
           </div>
         </section>
-      </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New support ticket">
         <form className="space-y-4" onSubmit={submit}>
@@ -193,6 +192,6 @@ export function SupportPage() {
           <Button type="submit">Create ticket</Button>
         </form>
       </Modal>
-    </div>
+    </PageFrame>
   )
 }

@@ -30,7 +30,7 @@ export function WorkspaceLoader() {
     >
       <div className="workspace-loader-bar" aria-hidden />
 
-      <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-surface dark:border-slate-800 dark:bg-slate-900">
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-surface dark:border-slate-800 dark:bg-slate-900 lg:flex">
         <div className="flex items-center gap-2.5 border-b border-border px-4 py-4 dark:border-slate-800">
           <div className="relative flex h-9 w-9 items-center justify-center">
             <span className="absolute inset-0 rounded-lg bg-brand-600/20 animate-ping opacity-40" />
@@ -63,9 +63,12 @@ export function WorkspaceLoader() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-end gap-2 border-b border-border bg-surface px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900">
-          <Bone className="h-9 w-44 rounded-lg" />
-          <Bone className="h-9 w-9 rounded-lg" />
+        <header className="flex w-full min-w-0 items-center justify-between gap-2 border-b border-border bg-surface px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900 sm:px-4">
+          <Bone className="h-9 flex-1 max-w-[14rem] rounded-lg sm:max-w-xs" />
+          <div className="flex shrink-0 gap-2">
+            <Bone className="h-9 w-9 rounded-lg" />
+            <Bone className="h-9 w-9 rounded-lg" />
+          </div>
         </header>
 
         <main className="flex-1 overflow-hidden p-8">

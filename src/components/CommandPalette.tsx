@@ -21,6 +21,8 @@ const pages = [
   { label: 'Reports', path: '/reports' },
   { label: 'Automations', path: '/automations' },
   { label: 'Integrations', path: '/integrations' },
+  { label: 'Marketing', path: '/marketing' },
+  { label: 'Support', path: '/support' },
   { label: 'Inbox', path: '/inbox' },
   { label: 'Settings', path: '/settings' },
 ]
@@ -162,12 +164,12 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/60 p-4 pt-[10vh] backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/60 p-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md sm:p-4 sm:pt-[10vh]"
       onClick={() => setOpen(false)}
       role="presentation"
     >
       <div
-        className="glass-panel w-full max-w-xl overflow-hidden rounded-2xl shadow-2xl shadow-slate-900/20 ring-1 ring-white/10"
+        className="glass-panel mx-auto w-full max-w-xl overflow-hidden rounded-2xl shadow-2xl shadow-slate-900/20 ring-1 ring-white/10"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Search"
