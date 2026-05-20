@@ -24,7 +24,12 @@ export function Toaster() {
 
   useEffect(() => {
     if (!confirm) return
-    return lockDocumentScroll()
+    const releaseScroll = lockDocumentScroll()
+    const releaseModal = registerModalOpen()
+    return () => {
+      releaseScroll()
+      releaseModal()
+    }
   }, [confirm])
 
   return (

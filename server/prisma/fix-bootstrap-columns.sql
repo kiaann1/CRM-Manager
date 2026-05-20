@@ -41,3 +41,32 @@ CREATE INDEX IF NOT EXISTS "Product_organizationId_status_idx"
   ON "Product" ("organizationId", "status");
 CREATE INDEX IF NOT EXISTS "Product_organizationId_sku_idx"
   ON "Product" ("organizationId", "sku");
+
+-- Notification deep links
+ALTER TABLE "Notification" ADD COLUMN IF NOT EXISTS "linkPath" TEXT;
+
+-- Saved list views (contacts / deals / leads filters)
+CREATE TABLE IF NOT EXISTS "SavedView" (
+  "id" TEXT NOT NULL,
+  "organizationId" TEXT NOT NULL,
+  "userId" TEXT,
+  "entityType" TEXT NOT NULL,
+  "name" TEXT NOT NULL,
+  "viewType" TEXT NOT NULL DEFAULT 'table',
+  "filters" JSONB NOT NULL,
+  "shared" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "SavedView_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "SavedView_organizationId_entityType_idx"
+  ON "SavedView" ("organizationId", "entityType");
+DO $$ BEGIN
+  ALTER TABLE "SavedView" ADD CONSTRAINT "SavedView_organizationId_fkey"
+    FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE "SavedView" ADD CONSTRAINT "SavedView_userId_fkey"
+    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

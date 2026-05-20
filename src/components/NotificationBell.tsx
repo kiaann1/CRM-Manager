@@ -1,5 +1,6 @@
 import { Bell } from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useCrm } from '../context/CrmContext'
 
 export function NotificationBell() {
@@ -45,14 +46,28 @@ export function NotificationBell() {
               ) : (
                 mine.slice(0, 12).map((n) => (
                   <li key={n.id}>
-                    <button
-                      type="button"
-                      className={`w-full px-4 py-3 text-left text-sm hover:bg-surface-muted dark:hover:bg-slate-800 ${n.read ? 'opacity-60' : ''}`}
-                      onClick={() => markNotificationRead(n.id)}
-                    >
-                      <p className="font-medium">{n.title}</p>
-                      <p className="text-text-muted">{n.body}</p>
-                    </button>
+                    {n.linkPath ? (
+                      <Link
+                        to={n.linkPath}
+                        className={`block w-full px-4 py-3 text-left text-sm hover:bg-surface-muted dark:hover:bg-slate-800 ${n.read ? 'opacity-60' : ''}`}
+                        onClick={() => {
+                          markNotificationRead(n.id)
+                          setOpen(false)
+                        }}
+                      >
+                        <p className="font-medium">{n.title}</p>
+                        <p className="text-text-muted">{n.body}</p>
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`w-full px-4 py-3 text-left text-sm hover:bg-surface-muted dark:hover:bg-slate-800 ${n.read ? 'opacity-60' : ''}`}
+                        onClick={() => markNotificationRead(n.id)}
+                      >
+                        <p className="font-medium">{n.title}</p>
+                        <p className="text-text-muted">{n.body}</p>
+                      </button>
+                    )}
                   </li>
                 ))
               )}

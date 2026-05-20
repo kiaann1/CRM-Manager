@@ -314,14 +314,23 @@ export async function ensureOrgStarterContent(organizationId: string) {
 
   const automationCount = await prisma.automationRule.count({ where: { organizationId } })
   if (automationCount === 0) {
-    await prisma.automationRule.create({
-      data: {
-        organizationId,
-        name: 'Proposal → follow-up task',
-        enabled: true,
-        trigger: { type: 'deal_stage_changed', stage: 'proposal' },
-        actions: [{ type: 'create_task', title: 'Send proposal follow-up' }],
-      },
+    await prisma.automationRule.createMany({
+      data: [
+        {
+          organizationId,
+          name: 'Proposal → follow-up task',
+          enabled: true,
+          trigger: { type: 'deal_stage_changed', stage: 'proposal' },
+          actions: [{ type: 'create_task', title: 'Send proposal follow-up' }],
+        },
+        {
+          organizationId,
+          name: 'New lead → notify owner',
+          enabled: true,
+          trigger: { type: 'lead_created' },
+          actions: [{ type: 'notify', message: 'New lead: {lead}' }],
+        },
+      ],
     })
   }
 }

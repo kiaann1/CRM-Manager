@@ -14,9 +14,9 @@ interface ListFilterBarProps {
   minScore?: number | ''
   onMinScoreChange?: (n: number | '') => void
   saved: SavedFilter[]
-  onSave: (name: string) => void
+  onSave: (name: string) => void | Promise<void>
   onApply: (f: SavedFilter) => void
-  onRemove: (id: string) => void
+  onRemove: (id: string) => void | Promise<void>
 }
 
 export function ListFilterBar({
@@ -84,8 +84,7 @@ export function ListFilterBar({
           className="self-end"
           onClick={() => {
             if (!saveName.trim()) return
-            onSave(saveName.trim())
-            setSaveName('')
+            void Promise.resolve(onSave(saveName.trim())).then(() => setSaveName(''))
           }}
         >
           <Bookmark size={14} /> Save
@@ -104,7 +103,7 @@ export function ListFilterBar({
               <button
                 type="button"
                 className="text-text-muted hover:text-rose-600"
-                onClick={() => onRemove(f.id)}
+                onClick={() => void onRemove(f.id)}
                 aria-label={`Remove ${f.name}`}
               >
                 ×

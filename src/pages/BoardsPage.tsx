@@ -1,4 +1,4 @@
-import { Columns, LayoutGrid, Calendar, GanttChart, Plus, LayoutTemplate } from 'lucide-react'
+import { Columns, LayoutGrid, Calendar, GanttChart, Plus, LayoutTemplate, Trash2 } from 'lucide-react'
 import { useState, type DragEvent } from 'react'
 import { PageFrame } from '../components/layout/PageFrame'
 import { SegmentedControl } from '../components/ui/SegmentedControl'
@@ -20,6 +20,7 @@ export function BoardsPage() {
     getUser,
     addBoardItem,
     moveBoardItem,
+    deleteBoardItem,
     createBoard,
     currentUser,
     users,
@@ -160,7 +161,21 @@ export function BoardsPage() {
                         onDragEnd={() => setDraggingId(null)}
                         className={`list-item cursor-grab p-3 active:cursor-grabbing ${draggingId === item.id ? 'opacity-50' : ''}`}
                       >
-                        <p className="text-sm font-medium">{item.title}</p>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="min-w-0 flex-1 text-sm font-medium">{item.title}</p>
+                          <button
+                            type="button"
+                            className="shrink-0 rounded p-1 text-text-muted hover:text-rose-600"
+                            aria-label="Delete card"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteBoardItem(item.id)
+                              toast.success('Card removed')
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                         <p className="text-xs text-text-muted">
                           {getUser(item.ownerId)?.name}
                           {item.dueDate ? ` · ${formatDate(item.dueDate)}` : ''}

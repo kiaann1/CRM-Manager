@@ -6,6 +6,7 @@ import { ZodError } from 'zod'
 import { config } from './config.js'
 import { authRouter } from './routes/auth.js'
 import { publicCatalogRouter } from './routes/publicCatalog.js'
+import { publicFormsRouter } from './routes/publicForms.js'
 import { v1Router } from './routes/v1/index.js'
 
 export function createApp() {
@@ -33,6 +34,7 @@ export function createApp() {
       next()
     },
     publicCatalogRouter,
+    publicFormsRouter,
   )
   app.use('/api/auth', authRouter)
   app.use('/api/v1', v1Router)

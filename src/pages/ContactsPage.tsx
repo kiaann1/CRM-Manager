@@ -15,7 +15,7 @@ import { ImportExportBar } from '../components/ImportExportBar'
 import { ListFilterBar } from '../components/ListFilterBar'
 import { RecordDrawer } from '../components/RecordDrawer'
 import { TagPicker } from '../components/TagPicker'
-import { useListFilters } from '../hooks/useListFilters'
+import { useEntityListFilters } from '../hooks/useEntityListFilters'
 import { USER_SARAH } from '../lib/ids'
 
 type ContactForm = Omit<Contact, 'id' | 'createdAt'>
@@ -36,7 +36,7 @@ export function ContactsPage() {
   const { contacts, companies, addContact, updateContact, deleteContact, getCompany, mergeContacts } =
     useCrm()
   const toast = useToast()
-  const filters = useListFilters('contacts')
+  const filters = useEntityListFilters('contacts')
   const [modalOpen, setModalOpen] = useState(false)
   const [mergeOpen, setMergeOpen] = useState(false)
   const [mergePrimary, setMergePrimary] = useState('')

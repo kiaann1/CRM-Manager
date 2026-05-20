@@ -5,6 +5,7 @@ import { writeAudit } from '../lib/audit.js'
 import { config } from '../config.js'
 import { prisma } from '../lib/prisma.js'
 import type { AuthRequest } from '../middleware/auth.js'
+import { requireRole } from '../middleware/auth.js'
 import { requireAuth } from '../middleware/auth.js'
 
 export const crmExtrasRouter = Router()
@@ -648,7 +649,7 @@ crmExtrasRouter.post('/contacts/merge', async (req: AuthRequest, res) => {
 })
 
 // ——— Pipeline stages ———
-crmExtrasRouter.patch('/pipeline-stages/:id', async (req: AuthRequest, res) => {
+crmExtrasRouter.patch('/pipeline-stages/:id', requireRole('admin', 'manager'), async (req: AuthRequest, res) => {
   const body = z
     .object({
       label: z.string().min(1).optional(),

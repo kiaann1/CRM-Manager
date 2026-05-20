@@ -2,7 +2,7 @@
 
 A React **revenue + work operating system** inspired by Monday.com, ClickUp, and HubSpot — with a **PostgreSQL-backed API**, JWT session cookies, OIDC SSO, webhooks, and API keys for integrations.
 
-**Documentation map:** [What’s implemented](#whats-implemented) · [Pages & features](#pages--features) · [Starter content](#starter-content-bootstrap) · [REST API](#rest-api-reference) · [Data model](#data-model-postgresql) · [Webhook events](#webhook-events-reference) · [Integrations](#integrations)
+**Documentation map:** [What’s implemented](#whats-implemented) · [Pages & features](#pages--features) · [Starter content](#starter-content-bootstrap) · [REST API](#rest-api-reference) · [Data model](#data-model-postgresql) · [Webhook events](#webhook-events-reference) · [Integrations](#integrations) · **[To do (backlog)](TODO.md)** · **[Deploy checklist](DEPLOY.md)**
 
 ---
 

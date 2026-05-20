@@ -52,6 +52,7 @@ model Organization {
   customFieldDefs   CustomFieldDef[]
   apiKeys           ApiKey[]
   invites           OrganizationInvite[]
+  savedViews        SavedView[]
 }
 
 model User {
@@ -78,6 +79,7 @@ model User {
   invitesSent    OrganizationInvite[] @relation("InvitesSent")
   inboxSent      InboxMessage[]       @relation("InboxSent")
   inboxReceived  InboxMessage[]       @relation("InboxReceived")
+  savedViews     SavedView[]
 }
 
 model OrganizationInvite {
@@ -379,10 +381,29 @@ model Notification {
   userId    String
   title     String
   body      String
+  /// In-app route (e.g. /deals) for notification bell deep links.
+  linkPath  String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SavedView {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  entityType     String
+  name           String
+  viewType       String   @default("table")
+  filters        Json
+  shared         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, entityType])
 }
 
 model Ticket {

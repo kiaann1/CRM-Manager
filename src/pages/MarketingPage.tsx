@@ -9,6 +9,7 @@ import { useCrm } from '../context/CrmContext'
 import { useToast } from '../context/ToastContext'
 import { deleteConfirm } from '../lib/confirm'
 import { useRegionalFormat } from '../lib/useRegionalFormat'
+import { api } from '../lib/api/client'
 import type { Campaign } from '../types'
 
 type CampaignForm = Omit<Campaign, 'id'>
@@ -94,7 +95,17 @@ export function MarketingPage() {
                 <p className="text-xs text-text-muted">
                   {f.fields.length} fields · {f.submissions.length} submissions
                 </p>
-                <p className="mt-2 font-mono text-xs text-text-muted">Embed: /embed/form/{f.id}</p>
+                <p className="mt-2 text-xs text-text-muted">
+                  Submit (public):{' '}
+                  <code className="break-all text-[11px]">
+                    POST{' '}
+                    {(api.baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/$/, '')}
+                    /api/public/forms/{f.id}/submit
+                  </code>
+                </p>
+                <p className="mt-1 text-xs text-text-muted">
+                  Body: <code className="text-[11px]">{`{ "values": { "email": "...", "company": "..." } }`}</code>
+                </p>
                 {f.submissions.length > 0 && (
                   <p className="mt-2 text-xs text-text-muted">
                     Latest: {Object.values(f.submissions[0]?.data ?? {}).join(' · ')}

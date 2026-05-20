@@ -2,7 +2,7 @@ import { Pencil, Plus, UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { ImportExportBar } from '../components/ImportExportBar'
 import { ListFilterBar } from '../components/ListFilterBar'
-import { useListFilters } from '../hooks/useListFilters'
+import { useEntityListFilters } from '../hooks/useEntityListFilters'
 import { PageFrame } from '../components/layout/PageFrame'
 import { RecordDrawer } from '../components/RecordDrawer'
 import { Button } from '../components/ui/Button'
@@ -30,7 +30,7 @@ const STAGES = [
 export function LeadsPage() {
   const { leads, users, addLead, updateLead, convertLead, deleteLead, getUser } = useCrm()
   const toast = useToast()
-  const filters = useListFilters('leads')
+  const filters = useEntityListFilters('leads')
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Lead | null>(null)
   const [drawer, setDrawer] = useState<Lead | null>(null)

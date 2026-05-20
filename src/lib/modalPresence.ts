@@ -28,7 +28,7 @@ export function registerModalOpen(): () => void {
 
 /** True while any `Modal` (or other caller of `registerModalOpen`) is open. */
 export function useAnyModalOpen(): boolean {
-  return useSyncExternalStore(subscribe, getSnapshot, () => false)
+  return useSyncExternalStore(subscribe, getSnapshot, () => 0) > 0
 }
 
 /** Hook for modal components. */

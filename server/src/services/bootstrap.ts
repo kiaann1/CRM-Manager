@@ -78,6 +78,7 @@ export async function buildBootstrap(orgId: string, userId: string) {
     surveys,
     auditLog,
     timeEntries,
+    savedViews,
   ] = await Promise.all([
     prisma.membership.findMany({
       where: { organizationId: orgId },
@@ -156,6 +157,13 @@ export async function buildBootstrap(orgId: string, userId: string) {
     }),
     prisma.timeEntry.findMany({
       where: { task: { organizationId: orgId } },
+    }),
+    prisma.savedView.findMany({
+      where: {
+        organizationId: orgId,
+        OR: [{ userId }, { shared: true }],
+      },
+      orderBy: { createdAt: 'asc' },
     }),
   ])
 
@@ -568,7 +576,27 @@ export async function buildBootstrap(orgId: string, userId: string) {
       feedback: s.feedback,
       createdAt: s.createdAt.toISOString(),
     })),
-    savedViews: [],
+    savedViews: savedViews.map((v) => {
+      const filters = v.filters as Record<string, unknown>
+      return {
+        id: v.id,
+        name: v.name,
+        entityType: v.entityType,
+        viewType: v.viewType as 'table' | 'board',
+        filters: {
+          query: typeof filters.query === 'string' ? filters.query : '',
+          ...(typeof filters.stage === 'string' && filters.stage
+            ? { stage: filters.stage }
+            : {}),
+          ...(typeof filters.minScore === 'number'
+            ? { minScore: filters.minScore }
+            : typeof filters.minScore === 'string' && filters.minScore !== ''
+              ? { minScore: Number(filters.minScore) }
+              : {}),
+        },
+        shared: v.shared,
+      }
+    }),
     auditLog: auditLog.map((a) => ({
       id: a.id,
       action: a.action,

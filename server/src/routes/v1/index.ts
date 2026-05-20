@@ -4,10 +4,10 @@ import { z } from 'zod'
 import { writeAudit } from '../../lib/audit.js'
 import { prisma } from '../../lib/prisma.js'
 import type { AuthRequest } from '../../middleware/auth.js'
-import { requireAuth } from '../../middleware/auth.js'
+import { requireAuth, requireRole } from '../../middleware/auth.js'
 import { computeLeadScore } from '../../lib/lead-score.js'
 import { buildBootstrap } from '../../services/bootstrap.js'
-import { runDealStageAutomations } from '../../services/automations.js'
+import { runDealStageAutomations, runLeadCreatedAutomations } from '../../services/automations.js'
 import { emitCrmEvent } from '../../services/crmEvents.js'
 import { dispatchWebhooks } from '../../services/webhooks.js'
 import { createHash, randomBytes } from 'crypto'
@@ -15,6 +15,7 @@ import { integrationsRouter } from '../integrations.js'
 import { invitesRouter } from '../invites.js'
 import { crmExtrasRouter } from '../crmExtras.js'
 import { searchRouter } from '../search.js'
+import { savedViewsRouter } from '../savedViews.js'
 import {
   preferencesCurrencySchema,
   preferencesLocaleSchema,
@@ -209,6 +210,13 @@ v1Router.patch('/deals/:id', async (req: AuthRequest, res) => {
       existing.stageKey,
     )
   }
+  await emitCrmEvent(req.auth!.orgId, 'deal.updated', {
+    id: deal.id,
+    title: deal.title,
+    stage: deal.stageKey,
+    value: deal.value,
+    changes: Object.keys(body),
+  })
   await writeAudit(req.auth!.orgId, req.auth!.sub, 'deal.updated', 'deal', deal.id)
   res.json(deal)
 })
@@ -403,6 +411,12 @@ v1Router.patch('/leads/:id', async (req: AuthRequest, res) => {
         : undefined,
     },
     include: { tags: true },
+  })
+  await emitCrmEvent(req.auth!.orgId, 'lead.updated', {
+    id: lead.id,
+    email: lead.email,
+    stage: lead.stage,
+    score: lead.score,
   })
   res.json({ ...lead, tagIds: lead.tags.map((t) => t.tagId) })
 })
@@ -600,6 +614,46 @@ v1Router.post('/sprints', async (req: AuthRequest, res) => {
   res.status(201).json(sprint)
 })
 
+v1Router.patch('/sprints/:id', async (req: AuthRequest, res) => {
+  const body = z
+    .object({
+      name: z.string().min(1).optional(),
+      start: z.string().optional(),
+      end: z.string().optional(),
+      teamId: z.string().optional(),
+    })
+    .parse(req.body)
+  const existing = await prisma.sprint.findFirst({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  if (!existing) {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  const sprint = await prisma.sprint.update({
+    where: { id: existing.id },
+    data: {
+      name: body.name?.trim(),
+      start: body.start ? new Date(body.start) : undefined,
+      end: body.end ? new Date(body.end) : undefined,
+      teamId: body.teamId,
+    },
+  })
+  res.json(sprint)
+})
+
+v1Router.delete('/sprints/:id', async (req: AuthRequest, res) => {
+  const existing = await prisma.sprint.findFirst({
+    where: { id: param(req.params.id), organizationId: req.auth!.orgId },
+  })
+  if (!existing) {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  await prisma.sprint.delete({ where: { id: existing.id } })
+  res.status(204).end()
+})
+
 // ——— Documents ———
 v1Router.post('/documents', async (req: AuthRequest, res) => {
   const body = z
@@ -738,7 +792,7 @@ v1Router.post('/webhooks/:id/test', async (req: AuthRequest, res) => {
 })
 
 // ——— API keys (programmatic access) ———
-v1Router.get('/api-keys', async (req: AuthRequest, res) => {
+v1Router.get('/api-keys', requireRole('admin', 'manager'), async (req: AuthRequest, res) => {
   const keys = await prisma.apiKey.findMany({
     where: { organizationId: req.auth!.orgId },
     orderBy: { createdAt: 'desc' },
@@ -753,7 +807,7 @@ v1Router.get('/api-keys', async (req: AuthRequest, res) => {
   res.json(keys)
 })
 
-v1Router.post('/api-keys', async (req: AuthRequest, res) => {
+v1Router.post('/api-keys', requireRole('admin', 'manager'), async (req: AuthRequest, res) => {
   const body = z.object({ name: z.string().min(1) }).parse(req.body)
   const raw = `crm_${randomBytes(32).toString('base64url')}`
   const keyHash = createHash('sha256').update(raw).digest('hex')

@@ -128,6 +128,20 @@ export const api = {
 
   bootstrap: () => request<CrmState>('/api/v1/bootstrap'),
 
+  createSavedView: (data: {
+    entityType: 'contacts' | 'deals' | 'leads'
+    name: string
+    filters: { query?: string; stage?: string; minScore?: number }
+    shared?: boolean
+  }) =>
+    request<{ id: string; name: string; entityType: string }>('/api/v1/saved-views', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deleteSavedView: (id: string) =>
+    request<void>(`/api/v1/saved-views/${id}`, { method: 'DELETE' }),
+
   search: (q: string) =>
     request<{
       contacts: { id: string; firstName: string; lastName: string; email: string; title: string }[]

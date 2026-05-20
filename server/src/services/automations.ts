@@ -52,6 +52,7 @@ export async function runDealStageAutomations(
             userId: deal.ownerId,
             title: rule.name,
             body: action.message,
+            linkPath: '/deals',
             read: false,
           },
         })
@@ -63,4 +64,54 @@ export async function runDealStageAutomations(
     orgId,
     `Deal *${deal.title}* moved to stage **${deal.stageKey}** (was ${previousStageKey}).`,
   )
+}
+
+export async function runLeadCreatedAutomations(
+  orgId: string,
+  lead: {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+    ownerId: string
+  },
+) {
+  const rules = await prisma.automationRule.findMany({
+    where: { organizationId: orgId, enabled: true },
+  })
+
+  const name = `${lead.firstName} ${lead.lastName}`.trim() || lead.email
+
+  for (const rule of rules) {
+    const trigger = rule.trigger as Trigger
+    if (trigger.type !== 'lead_created') continue
+
+    const actions = rule.actions as Action[]
+    for (const action of actions) {
+      if (action.type === 'create_task') {
+        await prisma.task.create({
+          data: {
+            organizationId: orgId,
+            title: action.title.replace('{lead}', name),
+            description: `Auto-created by automation: ${rule.name}`,
+            dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+            priority: 'high',
+            status: 'todo',
+            ownerId: lead.ownerId,
+          },
+        })
+      }
+      if (action.type === 'notify') {
+        await prisma.notification.create({
+          data: {
+            userId: lead.ownerId,
+            title: rule.name,
+            body: action.message.replace('{lead}', name),
+            linkPath: '/leads',
+            read: false,
+          },
+        })
+      }
+    }
+  }
 }

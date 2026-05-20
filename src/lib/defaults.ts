@@ -295,7 +295,7 @@ export const defaultState: CrmState = {
     { id: 'sv-1', companyId: 'co-1', score: 9, feedback: 'Great support!', createdAt: '2026-05-01T10:00:00Z' },
   ],
   savedViews: [
-    { id: 'svw-1', name: 'My open deals', entityType: 'deal', viewType: 'table', filters: { owner: USER_SARAH }, shared: false },
+    { id: 'svw-1', name: 'My open deals', entityType: 'deals', viewType: 'table', filters: { query: '', stage: 'proposal' }, shared: false },
   ],
   auditLog: [
     { id: 'aud-1', action: 'deal.updated', entityType: 'deal', entityId: 'dl-1', userId: USER_SARAH, at: '2026-05-14T10:00:00Z' },

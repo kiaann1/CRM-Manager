@@ -18,7 +18,7 @@ import { ImportExportBar } from '../components/ImportExportBar'
 import { RecordDrawer } from '../components/RecordDrawer'
 import { TagPicker } from '../components/TagPicker'
 import { ListFilterBar } from '../components/ListFilterBar'
-import { useListFilters } from '../hooks/useListFilters'
+import { useEntityListFilters } from '../hooks/useEntityListFilters'
 import { PIPE_DEFAULT } from '../lib/ids'
 import { badgeClass } from '../lib/theme'
 
@@ -58,7 +58,7 @@ export function DealsPage() {
   } = useCrm()
   const { formatCurrency } = useRegionalFormat()
   const toast = useToast()
-  const filters = useListFilters('deals')
+  const filters = useEntityListFilters('deals')
   const [modalOpen, setModalOpen] = useState(false)
   const ownerId = currentUser?.id ?? users[0]?.id ?? ''
   const defaultPipelineId = pipelines[0]?.id ?? PIPE_DEFAULT

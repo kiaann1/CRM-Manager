@@ -432,15 +432,6 @@ export interface Comment {
   createdAt: string
 }
 
-export interface Notification {
-  id: string
-  userId: string
-  title: string
-  body: string
-  read: boolean
-  createdAt: string
-}
-
 export interface InboxMessage {
   id: string
   teamId: string | null
@@ -489,13 +480,29 @@ export interface Survey {
   createdAt: string
 }
 
+export interface SavedViewFilters {
+  query?: string
+  stage?: string
+  minScore?: number
+}
+
 export interface SavedView {
   id: string
   name: string
   entityType: string
   viewType: ViewType
-  filters: Record<string, string>
+  filters: SavedViewFilters
   shared: boolean
+}
+
+export interface Notification {
+  id: string
+  userId: string
+  title: string
+  body: string
+  linkPath?: string
+  read: boolean
+  createdAt: string
 }
 
 export interface AuditLogEntry {
